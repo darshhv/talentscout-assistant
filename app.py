@@ -83,6 +83,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# --- Title ---
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 
 # --- Initialize session state ---
@@ -103,20 +104,16 @@ if "step" not in st.session_state:
 if "trigger_rerun" not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# --- Sidebar ---
-steps = [
-    "Candidate Info 📝",
-    "Technical Interview 💻",
-    "Evaluation Summary 📊"
-]
+# --- Sidebar for Steps Navigation ---
+steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
-for i, label in enumerate(steps, 1):
+for idx, label in enumerate(steps, start=1):
     if st.sidebar.button(label):
-        st.session_state.step = i
+        st.session_state.step = idx
         st.session_state.trigger_rerun = True
 st.sidebar.progress(st.session_state.step / len(steps))
 
-# --- Helpers ---
+# --- Helper functions (unchanged, keep as is) ---
 def reset_all():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
@@ -197,21 +194,18 @@ def parse_resume(file_bytes, filename):
     text = ""
     try:
         if filename.lower().endswith(".pdf"):
-            # Use PyMuPDF to extract text (faster and more reliable)
             pdf_doc = fitz.open(stream=file_bytes, filetype="pdf")
             for page in pdf_doc:
                 text += page.get_text()
         elif filename.lower().endswith(".txt"):
             text = file_bytes.decode("utf-8")
         else:
-            # fallback pdfminer
             text = extract_text(BytesIO(file_bytes))
     except Exception as e:
         st.warning(f"Could not parse resume: {e}")
     return text
 
 def extract_skills_from_resume(text):
-    # Simple heuristic to extract skills section or common keywords
     skills = []
     lines = text.lower().split("\n")
     keywords = ["python", "java", "react", "docker", "aws", "c++", "sql", "javascript",
@@ -224,7 +218,6 @@ def extract_skills_from_resume(text):
     return sorted(set(skills))
 
 def recommend_jobs_and_upskill(score, tech_stack):
-    # Basic logic, can be expanded with ML or rules
     if score >= 80:
         job = "Senior Developer / Lead"
         upskill = "Consider mentoring or learning architecture design."
@@ -253,20 +246,26 @@ def translate_text(text, target_language='en'):
         st.warning(f"Translation failed: {e}")
         return text
 
-# --- Candidate Info Step ---
+# --- Step 1: Candidate Info ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form", clear_on_submit=False):
-        col1, col2 = st.columns(2, gap="large")
-        with col1:
+        left, right = st.columns(2)
+        with left:
             name = st.text_input(
-                "Full Name", value=st.session_state.candidate_info.get("Full Name", "")
+                "Full Name",
+                value=st.session_state.candidate_info.get("Full Name", ""),
+                placeholder="Enter your full name"
             )
             email = st.text_input(
-                "Email Address", value=st.session_state.candidate_info.get("Email", "")
+                "Email Address",
+                value=st.session_state.candidate_info.get("Email", ""),
+                placeholder="example@mail.com"
             )
             phone = st.text_input(
-                "Phone Number", value=st.session_state.candidate_info.get("Phone", "")
+                "Phone Number",
+                value=st.session_state.candidate_info.get("Phone", ""),
+                placeholder="+91 12345 67890"
             )
             exp = st.number_input(
                 "Years of Experience",
@@ -274,42 +273,45 @@ if st.session_state.step == 1:
                 max_value=50,
                 value=st.session_state.candidate_info.get("Years of Experience", 0),
                 step=1,
+                help="Enter your total professional experience"
             )
-        with col2:
+        with right:
             role = st.text_input(
                 "Desired Position",
                 value=st.session_state.candidate_info.get("Desired Position", ""),
+                placeholder="E.g., Software Engineer"
             )
             location = st.text_input(
                 "Current Location",
                 value=st.session_state.candidate_info.get("Current Location", ""),
+                placeholder="E.g., Bengaluru"
             )
             tech_stack = st.text_area(
                 "Tech Stack (comma-separated)",
                 value=st.session_state.candidate_info.get("Tech Stack", ""),
                 height=120,
-                placeholder="E.g., Python, React, Docker, AWS",
+                placeholder="E.g., Python, React, Docker, AWS"
             )
-        resume_file = st.file_uploader("Upload Your Resume (PDF or TXT)", type=["pdf", "txt"])
+        resume_file = st.file_uploader(
+            "Upload Your Resume (PDF or TXT)",
+            type=["pdf", "txt"],
+            help="Optional: Upload resume to auto-extract skills"
+        )
         submitted = st.form_submit_button("👉 Generate Interview Questions")
 
     if resume_file:
         raw_bytes = resume_file.read()
         resume_text = parse_resume(raw_bytes, resume_file.name)
-        # Extract skills and pre-fill tech stack
         extracted_skills = extract_skills_from_resume(resume_text)
         if extracted_skills:
             st.info(f"Extracted skills from resume: {', '.join(extracted_skills)}")
-            # Update tech stack field live
-            if not tech_stack:
+            if not tech_stack.strip():
                 tech_stack = ", ".join(extracted_skills)
             else:
-                # Append if missing
                 current_skills = [x.strip().lower() for x in tech_stack.split(",")]
                 for s in extracted_skills:
                     if s.lower() not in current_skills:
                         tech_stack += ", " + s
-            # Update session state candidate info tech stack
             st.session_state.candidate_info["Tech Stack"] = tech_stack
 
     if submitted:
@@ -344,10 +346,9 @@ if st.session_state.step == 1:
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
 
-    # Language selection for multilingual support
     lang_option = st.selectbox(
         "Choose your language (answers will be translated to English for evaluation):",
-        options=["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
+        ["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
     )
     lang_code = lang_option[:2].lower()
     st.session_state.lang = lang_code
@@ -355,20 +356,19 @@ elif st.session_state.step == 2:
     with st.form("answers_form"):
         for tech, qas in st.session_state.answers.items():
             with st.expander(f"💡 {tech} ({len(qas)} questions)", expanded=False):
-                for i, qa in enumerate(qas):
-                    st.markdown(f"**Q{i + 1}. {qa['question']}**")
+                for idx, qa in enumerate(qas):
+                    st.markdown(f"**Q{idx+1}. {qa['question']}**")
                     ans = st.text_area(
-                        f"Your Answer for Q{i + 1}",
+                        f"Answer for Q{idx+1}",
                         value=qa["answer"],
                         height=110,
-                        key=f"{tech}_{i}",
-                        placeholder="Type your answer here...",
+                        key=f"{tech}_{idx}",
+                        placeholder="Type your answer here..."
                     )
-                    st.session_state.answers[tech][i]["answer"] = ans
+                    st.session_state.answers[tech][idx]["answer"] = ans
         submitted = st.form_submit_button("✅ Submit Answers")
 
     if submitted:
-        # Translate answers to English for scoring & sentiment
         translated = {}
         sentiments = {}
         for tech, qas in st.session_state.answers.items():
@@ -389,7 +389,6 @@ elif st.session_state.step == 2:
         score = evaluate_answers(st.session_state.answers)
         grade = grade_candidate(score)
 
-        # Recommendations based on score and tech stack
         job, upskill = recommend_jobs_and_upskill(score, st.session_state.candidate_info.get("Tech Stack", ""))
         st.session_state.job_recommendation = job
         st.session_state.upskill_recommendation = upskill
@@ -434,10 +433,10 @@ elif st.session_state.step == 3:
     st.markdown("### Review Answers and Translations")
     for tech, qas in st.session_state.answers.items():
         with st.expander(f"🔍 {tech} Answers", expanded=False):
-            for i, qa in enumerate(qas):
+            for idx, qa in enumerate(qas):
                 answer = qa.get("answer") or "_No answer provided_"
-                translated = st.session_state.translated_answers.get(tech, [""] * len(qas))[i]
-                st.markdown(f"**Q{i + 1}. {qa['question']}**")
+                translated = st.session_state.translated_answers.get(tech, [""] * len(qas))[idx]
+                st.markdown(f"**Q{idx+1}. {qa['question']}**")
                 st.markdown(f"**Answer:** {answer}")
                 if answer.strip() and answer != translated:
                     st.markdown(f"**(Translated to English):** {translated}")
