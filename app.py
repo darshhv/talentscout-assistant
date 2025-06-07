@@ -308,4 +308,4 @@ elif st.session_state.step == 3:
 # --- Manual Rerun Trigger ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
-    st.experimental_rerun()
+    st.rerun()
