@@ -10,7 +10,7 @@ HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
-# Streamlit Page Config and Style
+# Page config & style
 st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 st.markdown("""
 <style>
@@ -46,6 +46,8 @@ if 'step' not in st.session_state:
     st.session_state.answers = {}
     st.session_state.score = None
     st.session_state.grade = None
+if 'trigger_rerun' not in st.session_state:
+    st.session_state.trigger_rerun = False
 
 # Sidebar Navigation
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
@@ -53,7 +55,7 @@ st.sidebar.title("Interview Process")
 for i, s in enumerate(steps, 1):
     if st.sidebar.button(s, key=f"nav_{i}"):
         st.session_state.step = i
-        st.experimental_rerun()
+        st.session_state.trigger_rerun = True
 
 st.progress(st.session_state.step / len(steps))
 
@@ -146,7 +148,7 @@ if st.session_state.step == 1:
                 }
                 st.success("✅ Questions generated! Moving to next step...")
                 st.session_state.step = 2
-                st.experimental_rerun()
+                st.session_state.trigger_rerun = True
             else:
                 st.error("❌ Failed to generate questions. Try again later.")
 
@@ -170,7 +172,7 @@ elif st.session_state.step == 2:
         st.session_state.grade = grade
         st.success(f"🎯 Your Score: {score:.2f}% — {grade}")
         st.session_state.step = 3
-        st.experimental_rerun()
+        st.session_state.trigger_rerun = True
 
 # --- Step 3: Summary ---
 elif st.session_state.step == 3:
@@ -197,3 +199,8 @@ elif st.session_state.step == 3:
 
     if st.button("🔄 Restart Interview"):
         reset()
+
+# --- Safe rerun trigger ---
+if st.session_state.get("trigger_rerun"):
+    st.session_state.trigger_rerun = False
+    st.experimental_rerun()
