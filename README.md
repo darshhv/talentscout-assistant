@@ -336,7 +336,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ---
 
-# Appendix (Extra Content for 1000 lines)
+# Appendix 
 
 ---
 
