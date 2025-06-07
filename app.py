@@ -1,73 +1,35 @@
-import streamlit as st
+import streamlit as st 
 import requests
 import os
 import re
 import time
 from dotenv import load_dotenv
 
-# --- Set page config FIRST ---
-st.set_page_config(
-    page_title="TalentScout AI Hiring Assistant",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- Page Config ---
+st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 
-# Load HuggingFace Token from environment variable or .env
+# --- Load Environment ---
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN") or "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"
+
+# ✅ Fixed Hugging Face API URL
 API_URL = "https://api-inference.huggingface.co/models/google/gemma-7b-it"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
-# Styling & UI - premium look
+# --- Styling ---
 st.markdown("""
 <style>
-.stApp {
-    max-width: 900px;
-    margin: auto;
-    padding: 2rem 3rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #e0eafc, #cfdef3);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-h1 {
-    font-size: 3rem;
-    font-weight: 900;
-    color: #1a237e;
-    text-align: center;
-    margin-bottom: 2rem;
-    font-family: 'Poppins', sans-serif;
-}
-.stButton>button {
-    background-color: #3949ab;
-    color: white;
-    font-weight: 700;
-    padding: 0.6rem 1.4rem;
-    border-radius: 0.6rem;
-    transition: background-color 0.3s ease;
-    font-size: 1.1rem;
-}
-.stButton>button:hover {
-    background-color: #303f9f;
-}
-textarea, input, select {
-    border-radius: 0.5rem !important;
-    border: 1.5px solid #3949ab !important;
-    padding: 0.6rem !important;
-    font-size: 1rem !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-.stSidebar {
-    background-color: #e8eaf6;
-    border-radius: 0 12px 12px 0;
-}
+.stApp { max-width: 900px; margin: auto; padding: 2rem 3rem; background: linear-gradient(135deg, #e0eafc, #cfdef3); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);}
+h1 { font-size: 3rem; font-weight: 900; color: #1a237e; text-align: center; font-family: 'Poppins', sans-serif;}
+.stButton>button { background-color: #3949ab; color: white; font-weight: 700; padding: 0.6rem 1.4rem; border-radius: 0.6rem; font-size: 1.1rem;}
+.stButton>button:hover { background-color: #303f9f;}
+textarea, input, select { border-radius: 0.5rem !important; border: 1.5px solid #3949ab !important; padding: 0.6rem !important; font-size: 1rem !important;}
 </style>
 """, unsafe_allow_html=True)
 
-# Title
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 
-# --- Session State Initialization ---
+# --- Session ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.candidate_info = {}
@@ -79,23 +41,21 @@ if 'step' not in st.session_state:
 if 'trigger_rerun' not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# Sidebar Navigation
+# Sidebar Nav
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
 for i, s in enumerate(steps, 1):
     if st.sidebar.button(s, key=f"nav_{i}"):
         st.session_state.step = i
         st.session_state.trigger_rerun = True
-
 st.progress(st.session_state.step / len(steps))
 
-# Reset function
 def reset():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.experimental_rerun()
 
-# --- Core Functions ---
+# --- API Question Generator ---
 def generate_questions(tech_stack, retries=3, delay=5):
     prompt = f"""
 You're a technical interviewer.
@@ -114,6 +74,7 @@ Respond in this format:
         "inputs": prompt,
         "parameters": {"max_new_tokens": 512, "temperature": 0.7}
     }
+
     for attempt in range(retries):
         try:
             res = requests.post(API_URL, headers=headers, json=payload, timeout=90)
@@ -121,22 +82,23 @@ Respond in this format:
                 data = res.json()
                 if isinstance(data, list) and 'generated_text' in data[0]:
                     return data[0]['generated_text'].strip()
+                elif isinstance(data, dict) and 'generated_text' in data:
+                    return data['generated_text'].strip()
                 else:
-                    st.error("Unexpected API response format.")
+                    st.error("❌ Unexpected API response. Please try again.")
                     return None
             else:
                 st.error(f"API returned status code {res.status_code}: {res.text}")
                 return None
         except requests.exceptions.Timeout:
             if attempt < retries - 1:
-                st.warning(f"Timeout on attempt {attempt+1}. Retrying after {delay} seconds...")
+                st.warning(f"⏳ Timeout on attempt {attempt+1}. Retrying...")
                 time.sleep(delay)
-                continue
             else:
-                st.error("API request timed out after multiple retries.")
+                st.error("❌ API request timed out after multiple retries.")
                 return None
         except Exception as e:
-            st.error(f"Unexpected error: {e}")
+            st.error(f"🔥 Unexpected error: {e}")
             return None
 
 def parse_questions(text):
@@ -164,7 +126,7 @@ def grade_candidate(score):
             "Average - Needs Improvement" if score >= 40 else
             "Poor - Not Recommended")
 
-# --- Step 1: Candidate Info ---
+# --- Step 1: Info Form ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form"):
@@ -204,7 +166,7 @@ if st.session_state.step == 1:
             else:
                 st.error("❌ Failed to generate questions. Try again later.")
 
-# --- Step 2: Technical Interview ---
+# --- Step 2: Questions ---
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
     with st.form("answers_form"):
@@ -252,7 +214,7 @@ elif st.session_state.step == 3:
     if st.button("🔄 Restart Interview"):
         reset()
 
-# --- Safe rerun trigger ---
+# --- Rerun trigger ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
     st.experimental_rerun()
