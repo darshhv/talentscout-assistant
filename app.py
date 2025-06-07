@@ -3,9 +3,20 @@ import os
 import re
 import time
 import cohere
+import fitz  # PyMuPDF
 from dotenv import load_dotenv
+from googletrans import Translator
+from pdfminer.high_level import extract_text
+from io import BytesIO
+from textblob import TextBlob
 
-# --- Set Page Config (must be first Streamlit command) ---
+# --- Load Environment Variables ---
+load_dotenv()
+COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "your-default-key-here"
+co = cohere.Client(COHERE_API_KEY)
+translator = Translator()
+
+# --- Page Config ---
 st.set_page_config(
     page_title="TalentScout AI Hiring Assistant",
     layout="wide",
@@ -13,16 +24,10 @@ st.set_page_config(
     page_icon="🤖"
 )
 
-# --- Load Environment Variables ---
-load_dotenv()
-COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "your-default-key-here"
-co = cohere.Client(COHERE_API_KEY)
-
 # --- Custom CSS Styling ---
 st.markdown(
     """
     <style>
-    /* Container */
     .stApp {
         max-width: 900px;
         margin: 1.5rem auto 3rem;
@@ -32,7 +37,6 @@ st.markdown(
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    /* Title */
     h1 {
         font-size: 3.4rem !important;
         font-weight: 900 !important;
@@ -41,7 +45,6 @@ st.markdown(
         margin-bottom: 1rem !important;
         font-family: 'Poppins', sans-serif !important;
     }
-    /* Buttons */
     .stButton > button {
         background-color: #3949ab !important;
         color: white !important;
@@ -57,7 +60,6 @@ st.markdown(
         background-color: #303f9f !important;
         cursor: pointer;
     }
-    /* Inputs & Textareas */
     textarea, input, select {
         border-radius: 0.6rem !important;
         border: 1.6px solid #3949ab !important;
@@ -70,12 +72,10 @@ st.markdown(
         border-color: #1a237e !important;
         box-shadow: 0 0 8px #3949abaa !important;
     }
-    /* Expander Header */
     .streamlit-expanderHeader {
         font-weight: 700 !important;
         color: #283593 !important;
     }
-    /* Progress bar */
     .stProgress > div > div {
         background: #3949ab !important;
     }
@@ -84,7 +84,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- Page Title ---
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 
 # --- Initialize session state ---
@@ -96,10 +95,16 @@ if "step" not in st.session_state:
     st.session_state.answers = {}
     st.session_state.score = None
     st.session_state.grade = None
+    st.session_state.lang = "en"
+    st.session_state.translated_answers = {}
+    st.session_state.sentiment_scores = {}
+    st.session_state.job_recommendation = ""
+    st.session_state.upskill_recommendation = ""
+
 if "trigger_rerun" not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# --- Sidebar navigation ---
+# --- Sidebar ---
 steps = [
     "Candidate Info 📝",
     "Technical Interview 💻",
@@ -107,18 +112,29 @@ steps = [
 ]
 st.sidebar.title("Interview Process")
 for i, label in enumerate(steps, 1):
-    selected = (st.session_state.step == i)
-    if st.sidebar.button(label, key=f"nav_{i}"):
+    if st.sidebar.button(label):
         st.session_state.step = i
         st.session_state.trigger_rerun = True
 st.sidebar.progress(st.session_state.step / len(steps))
 
-# --- Utilities ---
-def reset():
-    keys = list(st.session_state.keys())
-    for key in keys:
+# --- Helpers ---
+def reset_all():
+    for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.experimental_rerun()
+
+def parse_questions(text):
+    sections = re.split(r"\n(?=###\s*)", text)
+    parsed = {}
+    for sec in sections:
+        lines = sec.strip().split("\n")
+        if not lines:
+            continue
+        tech = lines[0].replace("###", "").strip()
+        qs = [re.sub(r"^[*-]\s*", "", l).strip() for l in lines[1:] if l.strip()]
+        if qs:
+            parsed[tech] = qs
+    return parsed
 
 def generate_questions(tech_stack, retries=3, delay=5):
     prompt = f"""
@@ -157,19 +173,6 @@ Format your response exactly as:
                 st.error(f"❌ Cohere API failed after {retries} attempts: {e}")
                 return None
 
-def parse_questions(text):
-    sections = re.split(r"\n(?=###\s*)", text)
-    parsed = {}
-    for sec in sections:
-        lines = sec.strip().split("\n")
-        if not lines:
-            continue
-        tech = lines[0].replace("###", "").strip()
-        qs = [re.sub(r"^[*-]\s*", "", l).strip() for l in lines[1:] if l.strip()]
-        if qs:
-            parsed[tech] = qs
-    return parsed
-
 def evaluate_answers(qas):
     total = sum(len(v) for v in qas.values())
     answered = sum(1 for v in qas.values() for qa in v if qa.get("answer", "").strip())
@@ -185,7 +188,73 @@ def grade_candidate(score):
     else:
         return "Poor - Not Recommended"
 
-# --- Step 1: Candidate Info ---
+def sentiment_analysis(text):
+    if not text.strip():
+        return 0.0
+    analysis = TextBlob(text)
+    return analysis.sentiment.polarity  # Range [-1, 1]
+
+def parse_resume(file_bytes, filename):
+    text = ""
+    try:
+        if filename.lower().endswith(".pdf"):
+            # Use PyMuPDF to extract text (faster and more reliable)
+            pdf_doc = fitz.open(stream=file_bytes, filetype="pdf")
+            for page in pdf_doc:
+                text += page.get_text()
+        elif filename.lower().endswith(".txt"):
+            text = file_bytes.decode("utf-8")
+        else:
+            # fallback pdfminer
+            text = extract_text(BytesIO(file_bytes))
+    except Exception as e:
+        st.warning(f"Could not parse resume: {e}")
+    return text
+
+def extract_skills_from_resume(text):
+    # Simple heuristic to extract skills section or common keywords
+    skills = []
+    lines = text.lower().split("\n")
+    keywords = ["python", "java", "react", "docker", "aws", "c++", "sql", "javascript",
+                "html", "css", "tensorflow", "pytorch", "git", "linux", "node.js", "azure", "gcp"]
+    for kw in keywords:
+        for line in lines:
+            if kw in line:
+                skills.append(kw.capitalize())
+                break
+    return sorted(set(skills))
+
+def recommend_jobs_and_upskill(score, tech_stack):
+    # Basic logic, can be expanded with ML or rules
+    if score >= 80:
+        job = "Senior Developer / Lead"
+        upskill = "Consider mentoring or learning architecture design."
+    elif score >= 60:
+        job = "Mid-level Developer"
+        upskill = "Enhance problem-solving skills and system design."
+    elif score >= 40:
+        job = "Junior Developer"
+        upskill = "Focus on core programming and project experience."
+    else:
+        job = "Intern / Trainee"
+        upskill = "Improve fundamentals and complete online courses."
+
+    if tech_stack:
+        upskill += f" Upskill in {tech_stack} technologies is recommended."
+
+    return job, upskill
+
+def translate_text(text, dest_lang="en"):
+    if not text.strip():
+        return ""
+    try:
+        translated = translator.translate(text, dest=dest_lang)
+        return translated.text
+    except Exception as e:
+        st.warning(f"Translation failed: {e}")
+        return text
+
+# --- Candidate Info Step ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form", clear_on_submit=False):
@@ -222,7 +291,27 @@ if st.session_state.step == 1:
                 height=120,
                 placeholder="E.g., Python, React, Docker, AWS",
             )
+        resume_file = st.file_uploader("Upload Your Resume (PDF or TXT)", type=["pdf", "txt"])
         submitted = st.form_submit_button("👉 Generate Interview Questions")
+
+    if resume_file:
+        raw_bytes = resume_file.read()
+        resume_text = parse_resume(raw_bytes, resume_file.name)
+        # Extract skills and pre-fill tech stack
+        extracted_skills = extract_skills_from_resume(resume_text)
+        if extracted_skills:
+            st.info(f"Extracted skills from resume: {', '.join(extracted_skills)}")
+            # Update tech stack field live
+            if not tech_stack:
+                tech_stack = ", ".join(extracted_skills)
+            else:
+                # Append if missing
+                current_skills = [x.strip().lower() for x in tech_stack.split(",")]
+                for s in extracted_skills:
+                    if s.lower() not in current_skills:
+                        tech_stack += ", " + s
+            # Update session state candidate info tech stack
+            st.session_state.candidate_info["Tech Stack"] = tech_stack
 
     if submitted:
         if not name.strip() or not email.strip() or not phone.strip() or not tech_stack.strip():
@@ -255,25 +344,60 @@ if st.session_state.step == 1:
 # --- Step 2: Technical Interview ---
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
+
+    # Language selection for multilingual support
+    lang_option = st.selectbox(
+        "Choose your language (answers will be translated to English for evaluation):",
+        options=["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
+    )
+    lang_code = lang_option[:2].lower()
+    st.session_state.lang = lang_code
+
     with st.form("answers_form"):
         for tech, qas in st.session_state.answers.items():
             with st.expander(f"💡 {tech} ({len(qas)} questions)", expanded=False):
                 for i, qa in enumerate(qas):
                     st.markdown(f"**Q{i + 1}. {qa['question']}**")
-                    st.session_state.answers[tech][i]["answer"] = st.text_area(
+                    ans = st.text_area(
                         f"Your Answer for Q{i + 1}",
                         value=qa["answer"],
                         height=110,
                         key=f"{tech}_{i}",
                         placeholder="Type your answer here...",
                     )
+                    st.session_state.answers[tech][i]["answer"] = ans
         submitted = st.form_submit_button("✅ Submit Answers")
 
     if submitted:
+        # Translate answers to English for scoring & sentiment
+        translated = {}
+        sentiments = {}
+        for tech, qas in st.session_state.answers.items():
+            translated[tech] = []
+            sentiments[tech] = []
+            for qa in qas:
+                text = qa.get("answer", "").strip()
+                if lang_code != "en" and text:
+                    text_en = translate_text(text, dest_lang="en")
+                else:
+                    text_en = text
+                translated[tech].append(text_en)
+                sentiments[tech].append(sentiment_analysis(text_en))
+
+        st.session_state.translated_answers = translated
+        st.session_state.sentiment_scores = sentiments
+
         score = evaluate_answers(st.session_state.answers)
         grade = grade_candidate(score)
+
+        # Recommendations based on score and tech stack
+        job, upskill = recommend_jobs_and_upskill(score, st.session_state.candidate_info.get("Tech Stack", ""))
+        st.session_state.job_recommendation = job
+        st.session_state.upskill_recommendation = upskill
+
         st.session_state.score = score
         st.session_state.grade = grade
+
         st.success(f"🎯 Your Score: {score:.2f}% — {grade}")
         st.session_state.step = 3
         st.session_state.trigger_rerun = True
@@ -284,28 +408,45 @@ elif st.session_state.step == 3:
     st.balloons()
     st.success("✅ Interview Completed!")
 
-    st.markdown(f"### Candidate: **{st.session_state.candidate_info.get('Full Name', 'N/A')}**")
+    info = st.session_state.candidate_info
+    st.markdown(f"### Candidate: **{info.get('Full Name', 'N/A')}**")
     st.markdown(f"**Overall Score:** {st.session_state.score:.2f}%")
     st.markdown(f"**Final Grade:** {st.session_state.grade}")
 
-    st.markdown("### Scores by Technology")
+    st.markdown(f"### Recommended Job Role: **{st.session_state.job_recommendation}**")
+    st.markdown(f"### Upskill Suggestions: {st.session_state.upskill_recommendation}")
+
+    st.markdown("### Scores & Sentiments by Technology")
     for tech, qas in st.session_state.answers.items():
         tech_score = evaluate_answers({tech: qas})
         tech_grade = grade_candidate(tech_score)
-        st.markdown(f"- **{tech}**: {tech_score:.2f}% — {tech_grade}")
+        avg_sentiment = 0
+        if tech in st.session_state.sentiment_scores:
+            scores = st.session_state.sentiment_scores[tech]
+            avg_sentiment = sum(scores) / len(scores) if scores else 0
+        sentiment_text = (
+            "Positive 😊" if avg_sentiment > 0.1 else
+            "Neutral 😐" if -0.1 <= avg_sentiment <= 0.1 else
+            "Negative 😞"
+        )
+        st.markdown(f"- **{tech}**: {tech_score:.2f}% — {tech_grade} — Sentiment: {sentiment_text}")
 
     st.markdown("---")
-    st.markdown("### Review Answers")
+    st.markdown("### Review Answers and Translations")
     for tech, qas in st.session_state.answers.items():
         with st.expander(f"🔍 {tech} Answers", expanded=False):
             for i, qa in enumerate(qas):
+                answer = qa.get("answer") or "_No answer provided_"
+                translated = st.session_state.translated_answers.get(tech, [""] * len(qas))[i]
                 st.markdown(f"**Q{i + 1}. {qa['question']}**")
-                st.markdown(f"**Answer:** {qa['answer'] or '_No answer provided_'}")
+                st.markdown(f"**Answer:** {answer}")
+                if answer.strip() and answer != translated:
+                    st.markdown(f"**(Translated to English):** {translated}")
 
     if st.button("🔄 Restart Interview"):
-        reset()
+        reset_all()
 
-# --- Manual Rerun Trigger ---
+# --- Manual rerun ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
-    st.rerun()
+    st.experimental_rerun()
