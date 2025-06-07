@@ -1,0 +1,225 @@
+TalentScout AI Hiring Assistant
+Assignment Document
+
+Submitted by:
+Darshan Reddy
+Date: 2025-06-07
+Course / Internship: AI/ML Internship Project
+GitHub Repo: https://github.com/darshhv/talentscout-assistant
+Live Demo: https://talentscout-assistant-production.up.railway.app/
+
+1. Project Overview
+TalentScout AI Hiring Assistant is an AI-powered chatbot designed to streamline the technical interview process for recruiters and hiring managers. The system generates tailored, technology-specific interview questions based on the candidate’s profile and known skillset, offering an interactive Q&A experience and summarizing results in an easy-to-understand dashboard.
+
+By automating question generation and providing structured interview workflows, TalentScout improves hiring efficiency, ensures fairness, and enhances interview quality.
+
+2. Key Features
+Candidate Profiling: Capture candidate’s name, years of experience, and known technologies.
+
+Dynamic Question Generation: AI generates 3 interview questions per technology skill, graded by difficulty (easy, medium, hard).
+
+Interactive Chat UI: Real-time Q&A through a clean, user-friendly Streamlit interface.
+
+Answer Recording: Candidate answers are saved during the session with persistent state management.
+
+Summary Dashboard: Displays all Q&A pairs with skill-wise insights and answer completeness charts.
+
+Export Options: Download interview summaries as PDF reports for record keeping.
+
+Deployment Ready: Easily deployed on Railway with environment variable support for secure API key handling.
+
+3. Technologies Used
+Python 3.10+
+
+Streamlit (frontend UI and server)
+
+Cohere API (language model for question generation)
+
+Pandas & Matplotlib (data manipulation and visualization)
+
+fpdf2 (PDF report generation)
+
+Git & GitHub (version control)
+
+Railway (cloud deployment platform)
+
+dotenv (local environment variable management)
+
+4. System Architecture
+pgsql
+Copy
+Edit
++---------------------+          +--------------------+          +--------------------+
+| Candidate Web UI    | <------> | Streamlit Backend  | <------> | Cohere Language     |
+| (Browser)           |          | (Python Server)    |          | Model API           |
++---------------------+          +--------------------+          +--------------------+
+        |                             |                                   |
+ Candidate inputs              Prompt generation                  AI-generated questions
+        |                             |                                   |
+ Answer input                Store answers in session           Answer validation
+        |                             |                                   |
++---------------------+          +--------------------+          +--------------------+
+| Summary Dashboard   | <------> | Export PDF & CSV   |          | Deployment & CI/CD  |
++---------------------+          +--------------------+          +--------------------+
+The user interacts with a web UI built on Streamlit, which communicates with the backend server to create AI prompts and request interview questions from the Cohere language model API. Candidate answers are saved using session state. The system aggregates all data into a summary dashboard and supports exporting reports.
+
+5. Installation & Setup
+Prerequisites:
+
+Python 3.10 or higher installed
+
+Git installed
+
+Cohere API key (sign up at https://cohere.ai)
+
+(Optional) GitHub account for cloning and version control
+
+Installation Steps:
+
+Clone the repo:
+
+bash
+Copy
+Edit
+git clone https://github.com/darshhv/talentscout-assistant.git
+cd talentscout-assistant
+Create and activate a virtual environment:
+
+bash
+Copy
+Edit
+python -m venv venv
+# Windows
+.\venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
+Install dependencies:
+
+bash
+Copy
+Edit
+pip install -r requirements.txt
+Create a .env file in the root folder and add your Cohere API key:
+
+ini
+Copy
+Edit
+COHERE_API_KEY=your_cohere_api_key_here
+Run the app locally:
+
+bash
+Copy
+Edit
+streamlit run app.py
+Open http://localhost:8501 in your browser.
+
+6. Usage Workflow
+Input Candidate Details:
+Enter candidate name, experience (years), and select technologies known via sidebar controls.
+
+Generate Interview Questions:
+Click “Generate Interview Questions” to prompt the AI to create questions per selected tech with easy, medium, and hard levels.
+
+Conduct Interview:
+Candidate or recruiter answers questions interactively. Answers are saved in session state.
+
+View Summary Dashboard:
+After answering all questions, view a dashboard summarizing Q&A pairs and skill insights.
+
+Export Reports:
+Download interview results as PDF files for documentation or record keeping.
+
+7. Prompt Engineering
+The AI prompt is carefully designed to produce relevant, targeted interview questions. It includes:
+
+Candidate’s name and experience for context.
+
+An explicit list of technologies.
+
+A request for 3 questions per technology, each with easy, medium, and hard difficulty.
+
+A JSON output format for easier parsing in the app.
+
+Sample Prompt:
+
+pgsql
+Copy
+Edit
+You are an expert technical interviewer.  
+Candidate Name: John Doe  
+Experience: 3 years  
+Technologies: Python, React, AWS  
+
+Generate 3 interview questions for each technology, varying difficulty: easy, medium, hard.  
+Return answers as JSON with technology names as keys and question arrays.
+8. Deployment Guide
+Railway Deployment:
+
+Create a Railway account and install Railway CLI.
+
+Initialize Railway project inside your repo folder (railway init).
+
+Set environment variables (e.g., COHERE_API_KEY) in Railway dashboard.
+
+Deploy using railway up or by pushing to GitHub linked with Railway.
+
+Monitor logs with railway logs.
+
+Access the live app using the Railway-generated URL.
+
+Alternative Deployment:
+
+Heroku
+
+AWS Elastic Beanstalk
+
+Docker container (Dockerfile included in repo)
+
+9. Testing & Troubleshooting
+Unit tests are created using pytest for prompt generation, session state handling, and API responses.
+
+JSON parsing errors from AI responses are handled gracefully.
+
+Common issues such as missing API keys or session state loss are documented with fixes.
+
+10. Security Considerations
+API keys stored securely using .env and Railway environment variables.
+
+HTTPS enforced on production deployment for data security.
+
+Input sanitization to prevent injection attacks.
+
+API usage monitored to detect anomalies.
+
+11. Future Work Ideas
+Implement automated answer grading using embeddings similarity.
+
+Add audio/video interview support.
+
+Multi-user interfaces with recruiter login and permissions.
+
+Integration with calendar APIs for interview scheduling.
+
+Multilingual question generation and support.
+
+12. Screenshots & Live Demo
+Live App: https://talentscout-assistant-production.up.railway.app/
+
+(Include key screenshots of the candidate input form, generated questions, interactive Q&A, and summary dashboard here in your document.)
+
+13. Appendix: Sample Code Snippet (Prompt Generation)
+python
+Copy
+Edit
+def build_prompt(name, experience, tech_stack):
+    techs = ', '.join(tech_stack)
+    prompt = f"""
+    You are an expert technical interviewer.
+    Candidate Name: {name}
+    Experience: {experience} years
+    Technologies: {techs}
+    Generate 3 interview questions per technology, with difficulty levels easy, medium, hard.
+    Provide output in JSON format with technology names as keys and list of questions as values.
+    """
+    return prompt
+Thank you for reviewing the TalentScout AI Hiring Assistant project!
