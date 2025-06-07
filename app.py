@@ -1,8 +1,8 @@
 import streamlit as st
-import requests
 import os
 import re
 import time
+import cohere
 from dotenv import load_dotenv
 
 # --- Page Config ---
@@ -10,11 +10,10 @@ st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 
 # --- Load Environment ---
 load_dotenv()
-HF_API_TOKEN = os.getenv("HF_API_TOKEN") or "your_hf_api_token_here"
+COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "mKIVieau5Y6cGjqEFK960IkZfLIjRjCPs1KP3pNu"
 
-# ✅ Use a valid public Hugging Face model API URL
-API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-125M"
-headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
+# Initialize Cohere client
+co = cohere.Client(COHERE_API_KEY)
 
 # --- Styling ---
 st.markdown("""
@@ -71,38 +70,28 @@ Format your response exactly as:
 * Question 2
 * Question 3
 """
-    payload = {
-        "inputs": prompt,
-        "parameters": {"max_new_tokens": 512, "temperature": 0.7},
-        "options": {"wait_for_model": True}
-    }
 
     for attempt in range(retries):
         try:
-            res = requests.post(API_URL, headers=headers, json=payload, timeout=90)
-            if res.status_code == 200:
-                data = res.json()
-                # The output can be list or dict, try to extract generated_text
-                if isinstance(data, list) and "generated_text" in data[0]:
-                    return data[0]["generated_text"].strip()
-                elif isinstance(data, dict) and "generated_text" in data:
-                    return data["generated_text"].strip()
-                else:
-                    st.error("❌ Unexpected API response. Please try again.")
-                    return None
-            else:
-                st.error(f"API returned status code {res.status_code}: {res.text}")
-                return None
-        except requests.exceptions.Timeout:
+            response = co.generate(
+                model='xlarge',
+                prompt=prompt,
+                max_tokens=512,
+                temperature=0.7,
+                k=0,
+                p=1,
+                frequency_penalty=0,
+                presence_penalty=0,
+                stop_sequences=[]
+            )
+            return response.generations[0].text.strip()
+        except Exception as e:
             if attempt < retries - 1:
-                st.warning(f"⏳ Timeout on attempt {attempt+1}. Retrying in {delay}s...")
+                st.warning(f"⏳ Cohere API error on attempt {attempt+1}: {e}. Retrying in {delay}s...")
                 time.sleep(delay)
             else:
-                st.error("❌ API request timed out after multiple retries.")
+                st.error(f"❌ Cohere API failed after {retries} attempts: {e}")
                 return None
-        except Exception as e:
-            st.error(f"🔥 Unexpected error: {e}")
-            return None
 
 def parse_questions(text):
     sections = re.split(r'\n(?=###\s*)', text)
