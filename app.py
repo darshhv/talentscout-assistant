@@ -1,4 +1,4 @@
-import streamlit as st 
+import streamlit as st
 import requests
 import os
 import re
@@ -10,10 +10,10 @@ st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 
 # --- Load Environment ---
 load_dotenv()
-HF_API_TOKEN = os.getenv("HF_API_TOKEN") or "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"
+HF_API_TOKEN = os.getenv("HF_API_TOKEN") or "your_hf_api_token_here"
 
-# ✅ Fixed Hugging Face API URL
-API_URL = "https://api-inference.huggingface.co/models/google/gemma-7b-it"
+# ✅ Use a valid public Hugging Face model API URL
+API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-125M"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 # --- Styling ---
@@ -58,13 +58,14 @@ def reset():
 # --- API Question Generator ---
 def generate_questions(tech_stack, retries=3, delay=5):
     prompt = f"""
-You're a technical interviewer.
+You are a technical interviewer.
 
-A candidate has listed the following tech stack: {tech_stack}.
+A candidate has the following tech stack: {tech_stack}.
 
 Generate 3 to 5 technical interview questions for each technology mentioned.
 
-Respond in this format:
+Format your response exactly as:
+
 ### TechnologyName
 * Question 1
 * Question 2
@@ -72,7 +73,8 @@ Respond in this format:
 """
     payload = {
         "inputs": prompt,
-        "parameters": {"max_new_tokens": 512, "temperature": 0.7}
+        "parameters": {"max_new_tokens": 512, "temperature": 0.7},
+        "options": {"wait_for_model": True}
     }
 
     for attempt in range(retries):
@@ -80,10 +82,11 @@ Respond in this format:
             res = requests.post(API_URL, headers=headers, json=payload, timeout=90)
             if res.status_code == 200:
                 data = res.json()
-                if isinstance(data, list) and 'generated_text' in data[0]:
-                    return data[0]['generated_text'].strip()
-                elif isinstance(data, dict) and 'generated_text' in data:
-                    return data['generated_text'].strip()
+                # The output can be list or dict, try to extract generated_text
+                if isinstance(data, list) and "generated_text" in data[0]:
+                    return data[0]["generated_text"].strip()
+                elif isinstance(data, dict) and "generated_text" in data:
+                    return data["generated_text"].strip()
                 else:
                     st.error("❌ Unexpected API response. Please try again.")
                     return None
@@ -92,7 +95,7 @@ Respond in this format:
                 return None
         except requests.exceptions.Timeout:
             if attempt < retries - 1:
-                st.warning(f"⏳ Timeout on attempt {attempt+1}. Retrying...")
+                st.warning(f"⏳ Timeout on attempt {attempt+1}. Retrying in {delay}s...")
                 time.sleep(delay)
             else:
                 st.error("❌ API request timed out after multiple retries.")
@@ -102,8 +105,7 @@ Respond in this format:
             return None
 
 def parse_questions(text):
-    lines = text.split('\n')
-    sections = re.split(r'\n(?=###\s*)', "\n".join(lines))
+    sections = re.split(r'\n(?=###\s*)', text)
     parsed = {}
     for sec in sections:
         lines = sec.strip().split('\n')
@@ -121,12 +123,16 @@ def evaluate_answers(qas):
     return (answered / total) * 100 if total else 0
 
 def grade_candidate(score):
-    return ("Excellent - Highly Recommended" if score >= 80 else
-            "Good - Recommended" if score >= 60 else
-            "Average - Needs Improvement" if score >= 40 else
-            "Poor - Not Recommended")
+    if score >= 80:
+        return "Excellent - Highly Recommended"
+    elif score >= 60:
+        return "Good - Recommended"
+    elif score >= 40:
+        return "Average - Needs Improvement"
+    else:
+        return "Poor - Not Recommended"
 
-# --- Step 1: Info Form ---
+# --- Step 1: Candidate Info ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form"):
@@ -147,9 +153,13 @@ if st.session_state.step == 1:
             st.error("⚠️ Please fill all required fields!")
         else:
             st.session_state.candidate_info = {
-                "Full Name": name, "Email": email, "Phone": phone,
-                "Years of Experience": exp, "Desired Position": role,
-                "Current Location": location, "Tech Stack": tech_stack
+                "Full Name": name,
+                "Email": email,
+                "Phone": phone,
+                "Years of Experience": exp,
+                "Desired Position": role,
+                "Current Location": location,
+                "Tech Stack": tech_stack
             }
             with st.spinner("🧠 Generating questions..."):
                 questions_text = generate_questions(tech_stack)
@@ -166,7 +176,7 @@ if st.session_state.step == 1:
             else:
                 st.error("❌ Failed to generate questions. Try again later.")
 
-# --- Step 2: Questions ---
+# --- Step 2: Technical Interview ---
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
     with st.form("answers_form"):
@@ -188,7 +198,7 @@ elif st.session_state.step == 2:
         st.session_state.step = 3
         st.session_state.trigger_rerun = True
 
-# --- Step 3: Summary ---
+# --- Step 3: Evaluation Summary ---
 elif st.session_state.step == 3:
     st.header("📊 Step 3: Evaluation Summary")
     st.balloons()
