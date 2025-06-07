@@ -15,7 +15,7 @@ st.set_page_config(
 # Load HuggingFace Token from environment variable or .env
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN") or "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"
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+API_URL = "https://api-inference.huggingface.co/models/google/gemma-7b-it"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 # Styling & UI - premium look
