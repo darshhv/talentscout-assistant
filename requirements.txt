@@ -1,6 +1,7 @@
-streamlit==1.23.1
+streamlit>=1.18.1
 requests
 python-dotenv
 altair
 openai
 cohere
+pillow==9.5.0
