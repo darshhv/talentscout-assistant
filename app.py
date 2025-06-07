@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # --- Page Config ---
 st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 
-# --- Load Environment ---
+# --- Load Environment Variables ---
 load_dotenv()
 COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "mKIVieau5Y6cGjqEFK960IkZfLIjRjCPs1KP3pNu"
 
@@ -28,7 +28,7 @@ textarea, input, select { border-radius: 0.5rem !important; border: 1.5px solid 
 
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 
-# --- Session ---
+# --- Session Initialization ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.candidate_info = {}
@@ -40,7 +40,7 @@ if 'step' not in st.session_state:
 if 'trigger_rerun' not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# Sidebar Nav
+# Sidebar Navigation
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
 for i, s in enumerate(steps, 1):
@@ -54,7 +54,7 @@ def reset():
         del st.session_state[key]
     st.experimental_rerun()
 
-# --- API Question Generator ---
+# --- Function to Generate Questions from Cohere ---
 def generate_questions(tech_stack, retries=3, delay=5):
     prompt = f"""
 You are a technical interviewer.
@@ -70,11 +70,10 @@ Format your response exactly as:
 * Question 2
 * Question 3
 """
-
     for attempt in range(retries):
         try:
             response = co.generate(
-                model='xlarge',
+                model='command',  # Changed from 'xlarge' to 'command'
                 prompt=prompt,
                 max_tokens=512,
                 temperature=0.7,
@@ -87,12 +86,13 @@ Format your response exactly as:
             return response.generations[0].text.strip()
         except Exception as e:
             if attempt < retries - 1:
-                st.warning(f"⏳ Cohere API error on attempt {attempt+1}: {e}. Retrying in {delay}s...")
+                st.warning(f"⏳ Cohere API error on attempt {attempt + 1}: {e}. Retrying in {delay}s...")
                 time.sleep(delay)
             else:
                 st.error(f"❌ Cohere API failed after {retries} attempts: {e}")
                 return None
 
+# --- Parsing questions ---
 def parse_questions(text):
     sections = re.split(r'\n(?=###\s*)', text)
     parsed = {}
@@ -106,11 +106,13 @@ def parse_questions(text):
             parsed[tech] = qs
     return parsed
 
+# --- Evaluate answers completeness ---
 def evaluate_answers(qas):
     total = sum(len(v) for v in qas.values())
     answered = sum(1 for v in qas.values() for qa in v if qa.get("answer", "").strip())
     return (answered / total) * 100 if total else 0
 
+# --- Grade based on score ---
 def grade_candidate(score):
     if score >= 80:
         return "Excellent - Highly Recommended"
