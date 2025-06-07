@@ -1,37 +1,33 @@
 import streamlit as st
+
+# ✅ Must be the first Streamlit command
+st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
+
 import os
 import re
 import time
 import cohere
 from dotenv import load_dotenv
 
-# Display Streamlit version for debugging
-st.write(f"Streamlit version: {st.__version__}")
-
-# --- Page Config ---
-st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
-
 # --- Load Environment Variables ---
 load_dotenv()
-COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "mKIVieau5Y6cGjqEFK960IkZfLIjRjCPs1KP3pNu"
-
-# Initialize Cohere client
+COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "your-default-key-here"
 co = cohere.Client(COHERE_API_KEY)
 
-# --- Styling ---
+# --- Custom Styling ---
 st.markdown("""
 <style>
-.stApp { max-width: 900px; margin: auto; padding: 2rem 3rem; background: linear-gradient(135deg, #e0eafc, #cfdef3); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);}
-h1 { font-size: 3rem; font-weight: 900; color: #1a237e; text-align: center; font-family: 'Poppins', sans-serif;}
-.stButton>button { background-color: #3949ab; color: white; font-weight: 700; padding: 0.6rem 1.4rem; border-radius: 0.6rem; font-size: 1.1rem;}
-.stButton>button:hover { background-color: #303f9f;}
-textarea, input, select { border-radius: 0.5rem !important; border: 1.5px solid #3949ab !important; padding: 0.6rem !important; font-size: 1rem !important;}
+.stApp { max-width: 900px; margin: auto; padding: 2rem 3rem; background: linear-gradient(135deg, #e0eafc, #cfdef3); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+h1 { font-size: 3rem; font-weight: 900; color: #1a237e; text-align: center; font-family: 'Poppins', sans-serif; }
+.stButton>button { background-color: #3949ab; color: white; font-weight: 700; padding: 0.6rem 1.4rem; border-radius: 0.6rem; font-size: 1.1rem; }
+.stButton>button:hover { background-color: #303f9f; }
+textarea, input, select { border-radius: 0.5rem !important; border: 1.5px solid #3949ab !important; padding: 0.6rem !important; font-size: 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 
-# --- Session Initialization ---
+# --- Session State Setup ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.candidate_info = {}
@@ -43,25 +39,21 @@ if 'step' not in st.session_state:
 if 'trigger_rerun' not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# Sidebar Navigation
+# Sidebar Steps
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
-for i, s in enumerate(steps, 1):
-    if st.sidebar.button(s, key=f"nav_{i}"):
+for i, label in enumerate(steps, 1):
+    if st.sidebar.button(label, key=f"nav_{i}"):
         st.session_state.step = i
         st.session_state.trigger_rerun = True
 st.progress(st.session_state.step / len(steps))
 
+# --- Utilities ---
 def reset():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    # Use st.experimental_rerun only if available in your Streamlit version
-    try:
-        st.experimental_rerun()
-    except AttributeError:
-        st.stop()
+    st.rerun()
 
-# --- Function to Generate Questions from Cohere ---
 def generate_questions(tech_stack, retries=3, delay=5):
     prompt = f"""
 You are a technical interviewer.
@@ -99,7 +91,6 @@ Format your response exactly as:
                 st.error(f"❌ Cohere API failed after {retries} attempts: {e}")
                 return None
 
-# --- Parsing questions ---
 def parse_questions(text):
     sections = re.split(r'\n(?=###\s*)', text)
     parsed = {}
@@ -113,13 +104,11 @@ def parse_questions(text):
             parsed[tech] = qs
     return parsed
 
-# --- Evaluate answers completeness ---
 def evaluate_answers(qas):
     total = sum(len(v) for v in qas.values())
     answered = sum(1 for v in qas.values() for qa in v if qa.get("answer", "").strip())
     return (answered / total) * 100 if total else 0
 
-# --- Grade based on score ---
 def grade_candidate(score):
     if score >= 80:
         return "Excellent - Highly Recommended"
@@ -130,7 +119,7 @@ def grade_candidate(score):
     else:
         return "Poor - Not Recommended"
 
-# --- Step 1: Candidate Info ---
+# --- Step 1 ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form"):
@@ -174,7 +163,7 @@ if st.session_state.step == 1:
             else:
                 st.error("❌ Failed to generate questions. Try again later.")
 
-# --- Step 2: Technical Interview ---
+# --- Step 2 ---
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
     with st.form("answers_form"):
@@ -196,7 +185,7 @@ elif st.session_state.step == 2:
         st.session_state.step = 3
         st.session_state.trigger_rerun = True
 
-# --- Step 3: Evaluation Summary ---
+# --- Step 3 ---
 elif st.session_state.step == 3:
     st.header("📊 Step 3: Evaluation Summary")
     st.balloons()
@@ -222,10 +211,7 @@ elif st.session_state.step == 3:
     if st.button("🔄 Restart Interview"):
         reset()
 
-# --- Rerun trigger ---
+# --- Manual Rerun Trigger ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
-    try:
-        st.experimental_rerun()
-    except AttributeError:
-        st.stop()
+    st.rerun()
