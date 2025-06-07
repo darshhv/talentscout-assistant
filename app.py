@@ -298,7 +298,7 @@ elif st.session_state.step == 2:
 
                 st.success("✅ Answers evaluated. Proceeding to summary...")
                 st.session_state.step = 3
-                st.experimental_rerun()
+                st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Step 3: Summary & Recommendations ---
