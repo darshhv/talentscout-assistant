@@ -15,7 +15,7 @@ st.set_page_config(
 # Load HuggingFace Token from environment variable or .env
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN") or "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"
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct"
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 # Styling & UI - premium look
@@ -112,11 +112,11 @@ Respond in this format:
 """
     payload = {
         "inputs": prompt,
-        "parameters": {"max_new_tokens": 256, "temperature": 0.7}
+        "parameters": {"max_new_tokens": 512, "temperature": 0.7}
     }
     for attempt in range(retries):
         try:
-            res = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            res = requests.post(API_URL, headers=headers, json=payload, timeout=90)
             if res.status_code == 200:
                 data = res.json()
                 if isinstance(data, list) and 'generated_text' in data[0]:
