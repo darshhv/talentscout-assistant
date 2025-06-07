@@ -37,20 +37,14 @@ textarea, input {
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state defaults
+# Initialize session state
 if 'step' not in st.session_state:
     st.session_state.step = 1
-if 'candidate_info' not in st.session_state:
     st.session_state.candidate_info = {}
-if 'tech_questions_raw' not in st.session_state:
     st.session_state.tech_questions_raw = ""
-if 'tech_questions' not in st.session_state:
     st.session_state.tech_questions = {}
-if 'answers' not in st.session_state:
     st.session_state.answers = {}
-if 'score' not in st.session_state:
     st.session_state.score = None
-if 'grade' not in st.session_state:
     st.session_state.grade = None
 if 'trigger_rerun' not in st.session_state:
     st.session_state.trigger_rerun = False
@@ -65,15 +59,10 @@ for i, s in enumerate(steps, 1):
 
 st.progress(st.session_state.step / len(steps))
 
-# Reset function
+# Reset
 def reset():
-    keys_to_clear = [
-        'step', 'candidate_info', 'tech_questions_raw', 'tech_questions',
-        'answers', 'score', 'grade', 'trigger_rerun'
-    ]
-    for key in keys_to_clear:
-        if key in st.session_state:
-            del st.session_state[key]
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.experimental_rerun()
 
 # --- Core Functions ---
@@ -96,15 +85,7 @@ Respond in this format:
         "parameters": {"max_new_tokens": 256, "temperature": 0.7}
     }
     res = requests.post(API_URL, headers=headers, json=payload)
-    if res.status_code == 200:
-        try:
-            return res.json()[0]['generated_text'].strip()
-        except Exception:
-            st.error("Error parsing response from model.")
-            return None
-    else:
-        st.error(f"API error: {res.status_code} - {res.text}")
-        return None
+    return res.json()[0]['generated_text'].strip() if res.status_code == 200 else None
 
 def parse_questions(text):
     lines = text.split('\n')
@@ -126,14 +107,10 @@ def evaluate_answers(qas):
     return (answered / total) * 100 if total else 0
 
 def grade_candidate(score):
-    if score >= 80:
-        return "Excellent - Highly Recommended"
-    elif score >= 60:
-        return "Good - Recommended"
-    elif score >= 40:
-        return "Average - Needs Improvement"
-    else:
-        return "Poor - Not Recommended"
+    return ("Excellent - Highly Recommended" if score >= 80 else
+            "Good - Recommended" if score >= 60 else
+            "Average - Needs Improvement" if score >= 40 else
+            "Poor - Not Recommended")
 
 # --- Step 1: Candidate Info ---
 if st.session_state.step == 1:
@@ -223,7 +200,7 @@ elif st.session_state.step == 3:
     if st.button("🔄 Restart Interview"):
         reset()
 
-# --- Safe rerun trigger at the end ---
+# --- Safe rerun trigger ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
     st.experimental_rerun()
