@@ -23,92 +23,158 @@ st.set_page_config(
     page_icon="🤖"
 )
 
-# --- Custom CSS Styling ---
+# --- Custom CSS Styling for minimalistic Apple-like UI ---
 st.markdown(
     """
     <style>
-    /* Container styling */
+    /* Root app container */
     .stApp {
         max-width: 900px;
-        margin: 2rem auto 3rem;
-        padding: 2.5rem 3rem;
-        background: linear-gradient(135deg, #e0eafc, #cfdef3);
+        margin: 2.5rem auto 4rem;
+        padding: 3rem 3rem 4rem;
+        background: #fff;
         border-radius: 16px;
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+            Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        color: #1d1d1f;
     }
-    /* Main header */
+    /* Page title */
     h1 {
         font-size: 3.6rem !important;
-        font-weight: 900 !important;
-        color: #1a237e !important;
+        font-weight: 800 !important;
+        color: #000 !important;
         text-align: center !important;
-        margin-bottom: 1.5rem !important;
-        font-family: 'Poppins', sans-serif !important;
-        letter-spacing: 1.1px;
-        text-shadow: 1px 1px 2px #c5c9e4;
+        margin-bottom: 2rem !important;
+        letter-spacing: -0.03em;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+            Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif !important;
     }
-    /* Sidebar buttons */
-    .stSidebar .stButton > button {
-        background-color: #3949ab !important;
-        color: white !important;
+    /* Headers inside page */
+    .css-18e3th9 h2, .css-1v3fvcr h2 {
         font-weight: 700 !important;
-        border-radius: 0.8rem !important;
-        font-size: 1.1rem !important;
-        padding: 0.7rem 1.8rem !important;
-        margin-bottom: 0.75rem;
+        color: #111 !important;
+        margin-top: 2rem !important;
+        margin-bottom: 1.25rem !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+            Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif !important;
+    }
+    /* Sidebar styling */
+    .css-1d391kg {
+        background: #f7f7f8;
+        border-right: 1px solid #d2d2d7;
+    }
+    .css-1d391kg h2 {
+        font-weight: 700 !important;
+        color: #333 !important;
+        font-size: 1.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+    .css-1d391kg button {
+        background-color: transparent !important;
         border: none !important;
-        width: 100%;
-        transition: background-color 0.3s ease;
+        color: #0071e3 !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        padding: 0.4rem 0 !important;
+        text-align: left !important;
+        width: 100% !important;
+        cursor: pointer !important;
+        transition: color 0.2s ease;
     }
-    .stSidebar .stButton > button:hover {
-        background-color: #303f9f !important;
-        cursor: pointer;
+    .css-1d391kg button:hover {
+        color: #004fa3 !important;
     }
-    /* Main buttons */
+    /* Progress bar */
+    .stSidebar .stProgress > div > div {
+        background-color: #0071e3 !important;
+    }
+    /* Buttons */
     .stButton > button {
-        background-color: #3949ab !important;
-        color: white !important;
-        font-weight: 700 !important;
-        padding: 0.7rem 1.8rem !important;
-        border-radius: 0.8rem !important;
-        font-size: 1.1rem !important;
+        background-color: #0071e3 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.8rem !important;
+        border-radius: 12px !important;
+        font-size: 1.15rem !important;
         border: none !important;
+        box-shadow: 0 6px 12px rgba(0, 113, 227, 0.4);
+        transition: background-color 0.25s ease, box-shadow 0.25s ease;
         width: 100%;
-        transition: background-color 0.3s ease;
     }
     .stButton > button:hover {
-        background-color: #303f9f !important;
+        background-color: #005bb5 !important;
+        box-shadow: 0 8px 16px rgba(0, 91, 181, 0.6);
         cursor: pointer;
     }
-    /* Inputs, textareas, selects */
-    textarea, input, select {
-        border-radius: 0.6rem !important;
-        border: 1.6px solid #3949ab !important;
-        padding: 0.7rem !important;
-        font-size: 1.05rem !important;
-        transition: border-color 0.3s ease;
+    /* Inputs, textarea, select */
+    input[type=text], input[type=number], textarea, select {
+        border-radius: 10px !important;
+        border: 1.5px solid #c8c8cc !important;
+        padding: 0.7rem 1rem !important;
+        font-size: 1.1rem !important;
+        font-weight: 400 !important;
+        color: #1d1d1f !important;
+        background-color: #fafafa !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: none !important;
     }
-    textarea:focus, input:focus, select:focus {
+    input[type=text]:focus, input[type=number]:focus, textarea:focus, select:focus {
         outline: none !important;
-        border-color: #1a237e !important;
-        box-shadow: 0 0 10px #3949abaa !important;
+        border-color: #0071e3 !important;
+        box-shadow: 0 0 10px rgba(0,113,227,0.3) !important;
+        background-color: #fff !important;
     }
-    /* Expander header styling */
+    /* Expanders */
     .streamlit-expanderHeader {
         font-weight: 700 !important;
-        color: #283593 !important;
+        color: #0071e3 !important;
         font-size: 1.1rem !important;
     }
-    /* Progress bar color */
-    .stProgress > div > div {
-        background: #3949ab !important;
+    /* Text area height adjustment */
+    textarea {
+        min-height: 110px !important;
+        resize: vertical !important;
     }
-    /* Form label bold */
-    label[data-baseweb="label"] {
+    /* Info messages */
+    .stInfo {
+        background-color: #d0e6ff !important;
+        border-left: 5px solid #0071e3 !important;
+        padding: 1rem 1.5rem !important;
+        color: #003a75 !important;
+        font-weight: 500 !important;
+        border-radius: 8px !important;
+        margin-bottom: 1rem !important;
+    }
+    /* Warning messages */
+    .stWarning {
+        background-color: #fff4e5 !important;
+        border-left: 5px solid #ffb300 !important;
+        padding: 1rem 1.5rem !important;
+        color: #805600 !important;
         font-weight: 600 !important;
-        color: #1a237e !important;
-        font-size: 1rem !important;
+        border-radius: 8px !important;
+        margin-bottom: 1rem !important;
+    }
+    /* Error messages */
+    .stError {
+        background-color: #fdecea !important;
+        border-left: 5px solid #d93025 !important;
+        padding: 1rem 1.5rem !important;
+        color: #a31515 !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+        margin-bottom: 1rem !important;
+    }
+    /* Success messages */
+    .stSuccess {
+        background-color: #dff6dd !important;
+        border-left: 5px solid #2e7d32 !important;
+        padding: 1rem 1.5rem !important;
+        color: #1b5e20 !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+        margin-bottom: 1rem !important;
     }
     </style>
     """,
@@ -136,7 +202,7 @@ if "step" not in st.session_state:
 if "trigger_rerun" not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# --- Sidebar: Navigation ---
+# --- Sidebar with steps ---
 steps = [
     "Candidate Info 📝",
     "Technical Interview 💻",
@@ -149,7 +215,7 @@ for i, label in enumerate(steps, 1):
         st.session_state.trigger_rerun = True
 st.sidebar.progress(st.session_state.step / len(steps))
 
-# --- Helper functions (unchanged, no logic edits) ---
+# --- Helper functions (unchanged) ---
 def reset_all():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
@@ -224,7 +290,7 @@ def sentiment_analysis(text):
     if not text.strip():
         return 0.0
     analysis = TextBlob(text)
-    return analysis.sentiment.polarity
+    return analysis.sentiment.polarity  # Range [-1, 1]
 
 def parse_resume(file_bytes, filename):
     text = ""
@@ -285,33 +351,43 @@ def translate_text(text, target_language='en'):
 # --- Step 1: Candidate Info ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
-
     with st.form("candidate_form", clear_on_submit=False):
         col1, col2 = st.columns(2, gap="large")
-
         with col1:
-            name = st.text_input("Full Name", value=st.session_state.candidate_info.get("Full Name", ""))
-            email = st.text_input("Email Address", value=st.session_state.candidate_info.get("Email", ""))
-            phone = st.text_input("Phone Number", value=st.session_state.candidate_info.get("Phone", ""))
-            exp = st.number_input("Years of Experience",
-                                  min_value=0, max_value=50,
-                                  value=st.session_state.candidate_info.get("Years of Experience", 0),
-                                  step=1)
+            name = st.text_input(
+                "Full Name", value=st.session_state.candidate_info.get("Full Name", "")
+            )
+            email = st.text_input(
+                "Email Address", value=st.session_state.candidate_info.get("Email", "")
+            )
+            phone = st.text_input(
+                "Phone Number", value=st.session_state.candidate_info.get("Phone", "")
+            )
+            exp = st.number_input(
+                "Years of Experience",
+                min_value=0,
+                max_value=50,
+                value=st.session_state.candidate_info.get("Years of Experience", 0),
+                step=1,
+            )
         with col2:
-            role = st.text_input("Desired Position", value=st.session_state.candidate_info.get("Desired Position", ""))
-            location = st.text_input("Current Location", value=st.session_state.candidate_info.get("Current Location", ""))
+            role = st.text_input(
+                "Desired Position",
+                value=st.session_state.candidate_info.get("Desired Position", ""),
+            )
+            location = st.text_input(
+                "Current Location",
+                value=st.session_state.candidate_info.get("Current Location", ""),
+            )
             tech_stack = st.text_area(
                 "Tech Stack (comma-separated)",
                 value=st.session_state.candidate_info.get("Tech Stack", ""),
-                height=120,
+                height=130,
                 placeholder="E.g., Python, React, Docker, AWS",
             )
-
         resume_file = st.file_uploader("Upload Your Resume (PDF or TXT)", type=["pdf", "txt"])
-
         submitted = st.form_submit_button("👉 Generate Interview Questions")
 
-    # Extract skills from resume and update tech stack if empty or append
     if resume_file:
         raw_bytes = resume_file.read()
         resume_text = parse_resume(raw_bytes, resume_file.name)
@@ -361,8 +437,7 @@ elif st.session_state.step == 2:
 
     lang_option = st.selectbox(
         "Choose your language (answers will be translated to English for evaluation):",
-        options=["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"],
-        index=0,
+        options=["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
     )
     lang_code = lang_option[:2].lower()
     st.session_state.lang = lang_code
@@ -391,74 +466,71 @@ elif st.session_state.step == 2:
             for qa in qas:
                 text = qa.get("answer", "").strip()
                 if lang_code != "en" and text:
-                    text_en = translate_text(text, target_language="en")
+                    t_text = translate_text(text, "en")
                 else:
-                    text_en = text
-                translated[tech].append(text_en)
-                sentiments[tech].append(sentiment_analysis(text_en))
-
+                    t_text = text
+                translated[tech].append(t_text)
+                sentiments[tech].append(sentiment_analysis(t_text))
         st.session_state.translated_answers = translated
         st.session_state.sentiment_scores = sentiments
 
+        # Calculate overall score (simplified as % of answered questions)
         score = evaluate_answers(st.session_state.answers)
-        grade = grade_candidate(score)
+        st.session_state.score = round(score, 2)
+        st.session_state.grade = grade_candidate(score)
 
-        job, upskill = recommend_jobs_and_upskill(score, st.session_state.candidate_info.get("Tech Stack", ""))
+        # Job & Upskill recommendation
+        techs = st.session_state.candidate_info.get("Tech Stack", "")
+        job, upskill = recommend_jobs_and_upskill(score, techs)
         st.session_state.job_recommendation = job
         st.session_state.upskill_recommendation = upskill
 
-        st.session_state.score = score
-        st.session_state.grade = grade
-
-        st.success(f"🎯 Your Score: {score:.2f}% — {grade}")
+        st.success("✅ Answers submitted and evaluated! Proceed to summary.")
         st.session_state.step = 3
         st.session_state.trigger_rerun = True
 
 # --- Step 3: Evaluation Summary ---
 elif st.session_state.step == 3:
     st.header("📊 Step 3: Evaluation Summary")
-    st.balloons()
-    st.success("✅ Interview Completed!")
 
     info = st.session_state.candidate_info
-    st.markdown(f"### Candidate: **{info.get('Full Name', 'N/A')}**")
-    st.markdown(f"**Overall Score:** {st.session_state.score:.2f}%")
-    st.markdown(f"**Final Grade:** {st.session_state.grade}")
+    st.subheader("Candidate Details")
+    st.markdown(f"""
+    - **Name:** {info.get('Full Name', '')}
+    - **Email:** {info.get('Email', '')}
+    - **Phone:** {info.get('Phone', '')}
+    - **Experience:** {info.get('Years of Experience', '')} years
+    - **Position Applied:** {info.get('Desired Position', '')}
+    - **Location:** {info.get('Current Location', '')}
+    - **Tech Stack:** {info.get('Tech Stack', '')}
+    """)
 
-    st.markdown(f"### Recommended Job Role: **{st.session_state.job_recommendation}**")
-    st.markdown(f"### Upskill Suggestions: {st.session_state.upskill_recommendation}")
+    st.subheader("Interview Score & Grade")
+    st.markdown(f"### {st.session_state.score}% — {st.session_state.grade}")
 
-    st.markdown("### Scores & Sentiments by Technology")
+    st.subheader("Job Recommendation")
+    st.info(f"**Suggested Role:** {st.session_state.job_recommendation}")
+    st.info(f"**Upskill Recommendations:** {st.session_state.upskill_recommendation}")
+
+    st.subheader("Detailed Answers & Sentiment")
     for tech, qas in st.session_state.answers.items():
-        tech_score = evaluate_answers({tech: qas})
-        tech_grade = grade_candidate(tech_score)
-        avg_sentiment = 0
-        if tech in st.session_state.sentiment_scores:
-            scores = st.session_state.sentiment_scores[tech]
-            avg_sentiment = sum(scores) / len(scores) if scores else 0
-        sentiment_text = (
-            "Positive 😊" if avg_sentiment > 0.1 else
-            "Neutral 😐" if -0.1 <= avg_sentiment <= 0.1 else
-            "Negative 😞"
-        )
-        st.markdown(f"- **{tech}**: {tech_score:.2f}% — {tech_grade} — Sentiment: {sentiment_text}")
-
-    st.markdown("---")
-    st.markdown("### Review Answers and Translations")
-    for tech, qas in st.session_state.answers.items():
-        with st.expander(f"🔍 {tech} Answers", expanded=False):
+        with st.expander(f"{tech} ({len(qas)} questions)"):
             for i, qa in enumerate(qas):
-                answer = qa.get("answer") or "_No answer provided_"
+                answer = qa.get("answer", "").strip()
                 translated = st.session_state.translated_answers.get(tech, [""] * len(qas))[i]
+                sentiment = st.session_state.sentiment_scores.get(tech, [0]*len(qas))[i]
+                sentiment_emoji = "😊" if sentiment > 0.2 else "😐" if sentiment > -0.2 else "😟"
                 st.markdown(f"**Q{i + 1}. {qa['question']}**")
-                st.markdown(f"**Answer:** {answer}")
-                if answer.strip() and answer != translated:
-                    st.markdown(f"**(Translated to English):** {translated}")
+                st.markdown(f"- Answer: {answer or '*No answer provided*'}")
+                if st.session_state.lang != "en":
+                    st.markdown(f"- Translated: {translated or '*No translation*'}")
+                st.markdown(f"- Sentiment: {sentiment_emoji} ({sentiment:.2f})")
+                st.markdown("---")
 
     if st.button("🔄 Restart Interview"):
         reset_all()
 
-# --- Manual rerun ---
-if st.session_state.get("trigger_rerun"):
+# --- Auto rerun trigger ---
+if st.session_state.trigger_rerun:
     st.session_state.trigger_rerun = False
     st.rerun()
