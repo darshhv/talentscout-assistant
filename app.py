@@ -23,67 +23,175 @@ st.set_page_config(
     page_icon="🤖"
 )
 
-# --- Custom CSS Styling ---
+# --- Custom CSS Styling for Luxury UI ---
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+
+    /* Root app container */
     .stApp {
         max-width: 900px;
-        margin: 1.5rem auto 3rem;
-        padding: 2rem 3rem;
-        background: linear-gradient(135deg, #e0eafc, #cfdef3);
-        border-radius: 14px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 2rem auto 3rem;
+        padding: 3rem 4rem;
+        background: linear-gradient(135deg, #0b1422, #1a2a47);
+        border-radius: 20px;
+        box-shadow:
+            0 0 20px rgba(255, 215, 0, 0.2),
+            inset 0 0 15px rgba(255, 215, 0, 0.15);
+        font-family: 'Montserrat', sans-serif;
+        color: #f5e6c4;
+        transition: background 0.5s ease;
     }
+
+    /* Headings */
     h1 {
-        font-size: 3.4rem !important;
+        font-family: 'Playfair Display', serif !important;
+        font-size: 3.8rem !important;
         font-weight: 900 !important;
-        color: #1a237e !important;
+        color: #ffd700 !important;  /* Gold */
         text-align: center !important;
-        margin-bottom: 1rem !important;
-        font-family: 'Poppins', sans-serif !important;
+        margin-bottom: 2rem !important;
+        text-shadow: 0 0 8px #ffd700aa;
     }
-    .stButton > button {
-        background-color: #3949ab !important;
-        color: white !important;
+    h2, h3 {
+        color: #ffe082 !important;
         font-weight: 700 !important;
-        padding: 0.7rem 1.6rem !important;
-        border-radius: 0.8rem !important;
-        font-size: 1.1rem !important;
-        transition: background-color 0.3s ease;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: rgba(10, 20, 38, 0.95);
+        color: #ffe066;
+        border-right: 2px solid #ffd700;
+        font-family: 'Montserrat', sans-serif;
+        box-shadow: 2px 0 15px rgba(255, 215, 0, 0.3);
+        padding-top: 2rem;
+    }
+    [data-testid="stSidebar"] .css-1d391kg {
+        font-weight: 700;
+        font-size: 1.3rem;
+        margin-bottom: 1rem;
+        color: #ffd700;
+        text-align: center;
+        text-shadow: 0 0 5px #ffd700aa;
+    }
+    [data-testid="stSidebar"] button {
+        background-color: transparent !important;
         border: none !important;
+        color: #f5e6c4 !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1rem !important;
+        margin-bottom: 0.8rem !important;
+        width: 100% !important;
+        text-align: left !important;
+        transition: all 0.3s ease;
+    }
+    [data-testid="stSidebar"] button:hover {
+        color: #ffd700 !important;
+        text-shadow: 0 0 10px #ffd700;
+        cursor: pointer;
+        background-color: rgba(255, 215, 0, 0.1) !important;
+        border-radius: 10px;
+    }
+    [data-testid="stSidebar"] .css-1pq1v3m {
+        /* progress bar container */
+        background: #1a2a47 !important;
+        border-radius: 8px !important;
+        height: 12px !important;
+        margin-top: 1rem !important;
+        margin-bottom: 2rem !important;
+    }
+    [data-testid="stSidebar"] .stProgress > div > div {
+        background: #ffd700 !important;
+        box-shadow: 0 0 10px #ffd700cc;
+        border-radius: 8px !important;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #ffd700, #b8860b);
+        color: #0b1422 !important;
+        font-weight: 700 !important;
+        padding: 0.9rem 2rem !important;
+        border-radius: 15px !important;
+        font-size: 1.2rem !important;
+        box-shadow:
+            0 0 10px #ffd700,
+            inset 0 -3px 5px #b8860b;
+        border: none !important;
+        transition: all 0.4s ease;
         width: 100%;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
     }
     .stButton > button:hover {
-        background-color: #303f9f !important;
+        background: linear-gradient(135deg, #b8860b, #ffd700);
+        box-shadow:
+            0 0 20px #ffd700,
+            inset 0 3px 6px #fffacd;
         cursor: pointer;
+        transform: translateY(-2px);
     }
+
+    /* Text inputs, textareas, selects */
     textarea, input, select {
-        border-radius: 0.6rem !important;
-        border: 1.6px solid #3949ab !important;
-        padding: 0.7rem !important;
-        font-size: 1.05rem !important;
-        transition: border-color 0.3s ease;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #f5e6c4 !important;
+        border-radius: 12px !important;
+        border: 2px solid #ffd700 !important;
+        padding: 0.9rem 1.2rem !important;
+        font-size: 1.15rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease;
+        box-shadow: inset 0 0 5px #ffd700aa;
+        font-family: 'Montserrat', sans-serif;
+        resize: vertical !important;
+        width: 100% !important;
+    }
+    textarea::placeholder, input::placeholder {
+        color: #ffe082 !important;
+        font-style: italic;
     }
     textarea:focus, input:focus, select:focus {
         outline: none !important;
-        border-color: #1a237e !important;
-        box-shadow: 0 0 8px #3949abaa !important;
+        border-color: #fff176 !important;
+        box-shadow: 0 0 12px #fff176cc !important;
+        background: rgba(255, 255, 255, 0.15) !important;
     }
+
+    /* Expanders */
     .streamlit-expanderHeader {
         font-weight: 700 !important;
-        color: #283593 !important;
+        color: #fff176 !important;
+        font-size: 1.25rem !important;
+        font-family: 'Montserrat', sans-serif;
+        text-shadow: 0 0 8px #ffd700aa;
     }
+
+    /* Progress Bar */
     .stProgress > div > div {
-        background: #3949ab !important;
+        background: #ffd700 !important;
+        box-shadow: 0 0 12px #ffd700cc;
+    }
+
+    /* Markdown links */
+    a {
+        color: #ffd700 !important;
+        text-decoration: none !important;
+        font-weight: 700 !important;
+        transition: color 0.3s ease;
+    }
+    a:hover {
+        color: #fff176 !important;
+        text-decoration: underline !important;
+        cursor: pointer;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# --- Title ---
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 
 # --- Initialize session state ---
@@ -104,16 +212,20 @@ if "step" not in st.session_state:
 if "trigger_rerun" not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# --- Sidebar for Steps Navigation ---
-steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
+# --- Sidebar ---
+steps = [
+    "Candidate Info 📝",
+    "Technical Interview 💻",
+    "Evaluation Summary 📊"
+]
 st.sidebar.title("Interview Process")
-for idx, label in enumerate(steps, start=1):
+for i, label in enumerate(steps, 1):
     if st.sidebar.button(label):
-        st.session_state.step = idx
+        st.session_state.step = i
         st.session_state.trigger_rerun = True
 st.sidebar.progress(st.session_state.step / len(steps))
 
-# --- Helper functions (unchanged, keep as is) ---
+# --- Helpers ---
 def reset_all():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
@@ -246,26 +358,20 @@ def translate_text(text, target_language='en'):
         st.warning(f"Translation failed: {e}")
         return text
 
-# --- Step 1: Candidate Info ---
+# --- Candidate Info Step ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form", clear_on_submit=False):
-        left, right = st.columns(2)
-        with left:
+        col1, col2 = st.columns(2, gap="large")
+        with col1:
             name = st.text_input(
-                "Full Name",
-                value=st.session_state.candidate_info.get("Full Name", ""),
-                placeholder="Enter your full name"
+                "Full Name", value=st.session_state.candidate_info.get("Full Name", "")
             )
             email = st.text_input(
-                "Email Address",
-                value=st.session_state.candidate_info.get("Email", ""),
-                placeholder="example@mail.com"
+                "Email Address", value=st.session_state.candidate_info.get("Email", "")
             )
             phone = st.text_input(
-                "Phone Number",
-                value=st.session_state.candidate_info.get("Phone", ""),
-                placeholder="+91 12345 67890"
+                "Phone Number", value=st.session_state.candidate_info.get("Phone", "")
             )
             exp = st.number_input(
                 "Years of Experience",
@@ -273,30 +379,23 @@ if st.session_state.step == 1:
                 max_value=50,
                 value=st.session_state.candidate_info.get("Years of Experience", 0),
                 step=1,
-                help="Enter your total professional experience"
             )
-        with right:
+        with col2:
             role = st.text_input(
                 "Desired Position",
                 value=st.session_state.candidate_info.get("Desired Position", ""),
-                placeholder="E.g., Software Engineer"
             )
             location = st.text_input(
                 "Current Location",
                 value=st.session_state.candidate_info.get("Current Location", ""),
-                placeholder="E.g., Bengaluru"
             )
             tech_stack = st.text_area(
                 "Tech Stack (comma-separated)",
                 value=st.session_state.candidate_info.get("Tech Stack", ""),
                 height=120,
-                placeholder="E.g., Python, React, Docker, AWS"
+                placeholder="E.g., Python, React, Docker, AWS",
             )
-        resume_file = st.file_uploader(
-            "Upload Your Resume (PDF or TXT)",
-            type=["pdf", "txt"],
-            help="Optional: Upload resume to auto-extract skills"
-        )
+        resume_file = st.file_uploader("Upload Your Resume (PDF or TXT)", type=["pdf", "txt"])
         submitted = st.form_submit_button("👉 Generate Interview Questions")
 
     if resume_file:
@@ -305,7 +404,7 @@ if st.session_state.step == 1:
         extracted_skills = extract_skills_from_resume(resume_text)
         if extracted_skills:
             st.info(f"Extracted skills from resume: {', '.join(extracted_skills)}")
-            if not tech_stack.strip():
+            if not tech_stack:
                 tech_stack = ", ".join(extracted_skills)
             else:
                 current_skills = [x.strip().lower() for x in tech_stack.split(",")]
@@ -348,7 +447,7 @@ elif st.session_state.step == 2:
 
     lang_option = st.selectbox(
         "Choose your language (answers will be translated to English for evaluation):",
-        ["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
+        options=["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
     )
     lang_code = lang_option[:2].lower()
     st.session_state.lang = lang_code
@@ -356,16 +455,16 @@ elif st.session_state.step == 2:
     with st.form("answers_form"):
         for tech, qas in st.session_state.answers.items():
             with st.expander(f"💡 {tech} ({len(qas)} questions)", expanded=False):
-                for idx, qa in enumerate(qas):
-                    st.markdown(f"**Q{idx+1}. {qa['question']}**")
+                for i, qa in enumerate(qas):
+                    st.markdown(f"**Q{i + 1}. {qa['question']}**")
                     ans = st.text_area(
-                        f"Answer for Q{idx+1}",
+                        f"Your Answer for Q{i + 1}",
                         value=qa["answer"],
                         height=110,
-                        key=f"{tech}_{idx}",
-                        placeholder="Type your answer here..."
+                        key=f"{tech}_{i}",
+                        placeholder="Type your answer here...",
                     )
-                    st.session_state.answers[tech][idx]["answer"] = ans
+                    st.session_state.answers[tech][i]["answer"] = ans
         submitted = st.form_submit_button("✅ Submit Answers")
 
     if submitted:
@@ -375,76 +474,66 @@ elif st.session_state.step == 2:
             translated[tech] = []
             sentiments[tech] = []
             for qa in qas:
-                text = qa.get("answer", "").strip()
-                if lang_code != "en" and text:
-                    text_en = translate_text(text, target_language="en")
-                else:
-                    text_en = text
-                translated[tech].append(text_en)
-                sentiments[tech].append(sentiment_analysis(text_en))
-
+                ans = qa.get("answer", "")
+                trans = translate_text(ans, target_language="en")
+                translated[tech].append(trans)
+                sentiments[tech].append(sentiment_analysis(trans))
         st.session_state.translated_answers = translated
         st.session_state.sentiment_scores = sentiments
 
+        # Calculate score (simple % answered)
         score = evaluate_answers(st.session_state.answers)
+        st.session_state.score = score
         grade = grade_candidate(score)
+        st.session_state.grade = grade
 
         job, upskill = recommend_jobs_and_upskill(score, st.session_state.candidate_info.get("Tech Stack", ""))
         st.session_state.job_recommendation = job
         st.session_state.upskill_recommendation = upskill
 
-        st.session_state.score = score
-        st.session_state.grade = grade
+        st.success(f"🎉 Your answers have been submitted! You scored: **{score:.1f}%** - {grade}")
+        st.info(f"Suggested role: **{job}**")
+        st.info(f"Upskill advice: {upskill}")
 
-        st.success(f"🎯 Your Score: {score:.2f}% — {grade}")
-        st.session_state.step = 3
-        st.session_state.trigger_rerun = True
+        if st.button("🔙 Go Back to Candidate Info"):
+            st.session_state.step = 1
+            st.experimental_rerun()
+        if st.button("📊 Proceed to Evaluation Summary"):
+            st.session_state.step = 3
+            st.experimental_rerun()
 
 # --- Step 3: Evaluation Summary ---
 elif st.session_state.step == 3:
     st.header("📊 Step 3: Evaluation Summary")
-    st.balloons()
-    st.success("✅ Interview Completed!")
 
+    st.markdown("### Candidate Details")
     info = st.session_state.candidate_info
-    st.markdown(f"### Candidate: **{info.get('Full Name', 'N/A')}**")
-    st.markdown(f"**Overall Score:** {st.session_state.score:.2f}%")
-    st.markdown(f"**Final Grade:** {st.session_state.grade}")
+    for k, v in info.items():
+        st.markdown(f"**{k}:** {v}")
 
-    st.markdown(f"### Recommended Job Role: **{st.session_state.job_recommendation}**")
-    st.markdown(f"### Upskill Suggestions: {st.session_state.upskill_recommendation}")
+    st.markdown("### Interview Performance")
+    st.markdown(f"**Overall Score:** {st.session_state.score:.1f}%")
+    st.markdown(f"**Grade:** {st.session_state.grade}")
 
-    st.markdown("### Scores & Sentiments by Technology")
-    for tech, qas in st.session_state.answers.items():
-        tech_score = evaluate_answers({tech: qas})
-        tech_grade = grade_candidate(tech_score)
-        avg_sentiment = 0
-        if tech in st.session_state.sentiment_scores:
-            scores = st.session_state.sentiment_scores[tech]
-            avg_sentiment = sum(scores) / len(scores) if scores else 0
-        sentiment_text = (
-            "Positive 😊" if avg_sentiment > 0.1 else
-            "Neutral 😐" if -0.1 <= avg_sentiment <= 0.1 else
-            "Negative 😞"
-        )
-        st.markdown(f"- **{tech}**: {tech_score:.2f}% — {tech_grade} — Sentiment: {sentiment_text}")
+    st.markdown("### Answers & Sentiment Analysis")
+    for tech, answers in st.session_state.answers.items():
+        with st.expander(f"🔍 {tech} Answers & Sentiments"):
+            for i, qa in enumerate(answers):
+                ans = qa.get("answer", "")
+                trans = st.session_state.translated_answers.get(tech, [""] * len(answers))[i]
+                sentiment = st.session_state.sentiment_scores.get(tech, [0.0] * len(answers))[i]
+                st.markdown(f"**Q{i+1}:** {qa['question']}")
+                st.markdown(f"- **Answer:** {ans or '_No answer provided_'}")
+                st.markdown(f"- **Translated:** {trans or '_N/A_'}")
+                st.markdown(f"- **Sentiment Score:** {sentiment:.2f}")
+                st.markdown("---")
 
-    st.markdown("---")
-    st.markdown("### Review Answers and Translations")
-    for tech, qas in st.session_state.answers.items():
-        with st.expander(f"🔍 {tech} Answers", expanded=False):
-            for idx, qa in enumerate(qas):
-                answer = qa.get("answer") or "_No answer provided_"
-                translated = st.session_state.translated_answers.get(tech, [""] * len(qas))[idx]
-                st.markdown(f"**Q{idx+1}. {qa['question']}**")
-                st.markdown(f"**Answer:** {answer}")
-                if answer.strip() and answer != translated:
-                    st.markdown(f"**(Translated to English):** {translated}")
+    st.markdown("### Recommendations")
+    st.success(f"**Suggested Role:** {st.session_state.job_recommendation}")
+    st.info(f"**Upskill Advice:** {st.session_state.upskill_recommendation}")
 
-    if st.button("🔄 Restart Interview"):
+    if st.button("🔙 Go Back to Interview"):
+        st.session_state.step = 2
+        st.rerun()
+    if st.button("🔄 Start Over"):
         reset_all()
-
-# --- Manual rerun ---
-if st.session_state.get("trigger_rerun"):
-    st.session_state.trigger_rerun = False
-    st.rerun()
