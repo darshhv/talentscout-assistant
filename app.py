@@ -236,7 +236,7 @@ if st.session_state.step == 1:
             }
             st.success("Candidate info saved. Proceed to Step 2.")
             st.session_state.step = 2
-            st.experimental_rerun()
+            st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
