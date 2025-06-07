@@ -5,6 +5,9 @@ import time
 import cohere
 from dotenv import load_dotenv
 
+# Display Streamlit version for debugging
+st.write(f"Streamlit version: {st.__version__}")
+
 # --- Page Config ---
 st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 
@@ -52,7 +55,11 @@ st.progress(st.session_state.step / len(steps))
 def reset():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    st.experimental_rerun()
+    # Use st.experimental_rerun only if available in your Streamlit version
+    try:
+        st.experimental_rerun()
+    except AttributeError:
+        st.stop()
 
 # --- Function to Generate Questions from Cohere ---
 def generate_questions(tech_stack, retries=3, delay=5):
@@ -73,7 +80,7 @@ Format your response exactly as:
     for attempt in range(retries):
         try:
             response = co.generate(
-                model='command',  # Changed from 'xlarge' to 'command'
+                model='command',
                 prompt=prompt,
                 max_tokens=512,
                 temperature=0.7,
@@ -218,4 +225,7 @@ elif st.session_state.step == 3:
 # --- Rerun trigger ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
-    st.experimental_rerun()
+    try:
+        st.experimental_rerun()
+    except AttributeError:
+        st.stop()
