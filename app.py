@@ -4,13 +4,13 @@ import os
 import re
 from dotenv import load_dotenv
 
-# Load HuggingFace Token
+# Load environment variables (HF API Token)
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
-# Page config & style
+# --- Page config & styling ---
 st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 st.markdown("""
 <style>
@@ -27,6 +27,7 @@ st.markdown("""
     font-weight: 600;
     padding: 0.5rem 1rem;
     border-radius: 0.4rem;
+    transition: background-color 0.3s ease;
 }
 .stButton>button:hover {
     background-color: #45a049;
@@ -37,7 +38,7 @@ textarea, input {
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
+# --- Initialize session state ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.candidate_info = {}
@@ -49,7 +50,7 @@ if 'step' not in st.session_state:
 if 'trigger_rerun' not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# Sidebar Navigation
+# --- Sidebar Navigation ---
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
 for i, s in enumerate(steps, 1):
@@ -59,13 +60,29 @@ for i, s in enumerate(steps, 1):
 
 st.progress(st.session_state.step / len(steps))
 
-# Reset
+# --- Reset function ---
 def reset():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.experimental_rerun()
 
-# --- Core Functions ---
+# --- Safe rerun function with fallback ---
+def safe_rerun():
+    try:
+        st.experimental_rerun()
+    except AttributeError:
+        st.warning("⚠️ Automatic refresh not supported in this Streamlit version. Please refresh the page manually.")
+
+# --- Input Validators ---
+def is_valid_email(email):
+    return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
+
+def is_valid_phone(phone):
+    # Simplistic validation: digits, +, -, space, min 7 digits total
+    digits = re.sub(r"\D", "", phone)
+    return len(digits) >= 7
+
+# --- Core functions ---
 def generate_questions(tech_stack):
     prompt = f"""
 You're a technical interviewer.
@@ -84,11 +101,31 @@ Respond in this format:
         "inputs": prompt,
         "parameters": {"max_new_tokens": 256, "temperature": 0.7}
     }
-    res = requests.post(API_URL, headers=headers, json=payload)
-    return res.json()[0]['generated_text'].strip() if res.status_code == 200 else None
+    try:
+        res = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+    except requests.RequestException as e:
+        st.error(f"Network/API error: {e}")
+        return None
+
+    if res.status_code == 200:
+        try:
+            data = res.json()
+            # Sometimes the response format might differ; handle safely
+            if isinstance(data, list) and len(data) > 0 and 'generated_text' in data[0]:
+                return data[0]['generated_text'].strip()
+            else:
+                st.error("Unexpected API response format.")
+                return None
+        except Exception as e:
+            st.error(f"Error parsing API response: {e}")
+            return None
+    else:
+        st.error(f"API returned status code {res.status_code}: {res.text}")
+        return None
 
 def parse_questions(text):
     lines = text.split('\n')
+    # Split by lines starting with "### "
     sections = re.split(r'\n(?=###\s*)', "\n".join(lines))
     parsed = {}
     for sec in sections:
@@ -129,13 +166,22 @@ if st.session_state.step == 1:
         submitted = st.form_submit_button("👉 Generate Interview Questions")
 
     if submitted:
-        if not name or not email or not phone or not tech_stack.strip():
+        # Validation
+        if not name.strip() or not email.strip() or not phone.strip() or not tech_stack.strip():
             st.error("⚠️ Please fill all required fields!")
+        elif not is_valid_email(email):
+            st.error("⚠️ Please enter a valid email address.")
+        elif not is_valid_phone(phone):
+            st.error("⚠️ Please enter a valid phone number (at least 7 digits).")
         else:
             st.session_state.candidate_info = {
-                "Full Name": name, "Email": email, "Phone": phone,
-                "Years of Experience": exp, "Desired Position": role,
-                "Current Location": location, "Tech Stack": tech_stack
+                "Full Name": name.strip(),
+                "Email": email.strip(),
+                "Phone": phone.strip(),
+                "Years of Experience": exp,
+                "Desired Position": role.strip(),
+                "Current Location": location.strip(),
+                "Tech Stack": tech_stack.strip()
             }
             with st.spinner("🧠 Generating questions..."):
                 questions_text = generate_questions(tech_stack)
@@ -203,4 +249,4 @@ elif st.session_state.step == 3:
 # --- Safe rerun trigger ---
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
-    st.experimental_rerun()
+    safe_rerun()
