@@ -5,16 +5,15 @@ import time
 import cohere
 import fitz  # PyMuPDF
 from dotenv import load_dotenv
-from googletrans import Translator
 from pdfminer.high_level import extract_text
 from io import BytesIO
 from textblob import TextBlob
+from deep_translator import GoogleTranslator
 
 # --- Load Environment Variables ---
 load_dotenv()
 COHERE_API_KEY = os.getenv("COHERE_API_KEY") or "your-default-key-here"
 co = cohere.Client(COHERE_API_KEY)
-translator = Translator()
 
 # --- Page Config ---
 st.set_page_config(
@@ -198,18 +197,21 @@ def parse_resume(file_bytes, filename):
     text = ""
     try:
         if filename.lower().endswith(".pdf"):
+            # Use PyMuPDF to extract text (faster and more reliable)
             pdf_doc = fitz.open(stream=file_bytes, filetype="pdf")
             for page in pdf_doc:
                 text += page.get_text()
         elif filename.lower().endswith(".txt"):
             text = file_bytes.decode("utf-8")
         else:
+            # fallback pdfminer
             text = extract_text(BytesIO(file_bytes))
     except Exception as e:
         st.warning(f"Could not parse resume: {e}")
     return text
 
 def extract_skills_from_resume(text):
+    # Simple heuristic to extract skills section or common keywords
     skills = []
     lines = text.lower().split("\n")
     keywords = ["python", "java", "react", "docker", "aws", "c++", "sql", "javascript",
@@ -222,6 +224,7 @@ def extract_skills_from_resume(text):
     return sorted(set(skills))
 
 def recommend_jobs_and_upskill(score, tech_stack):
+    # Basic logic, can be expanded with ML or rules
     if score >= 80:
         job = "Senior Developer / Lead"
         upskill = "Consider mentoring or learning architecture design."
@@ -240,12 +243,12 @@ def recommend_jobs_and_upskill(score, tech_stack):
 
     return job, upskill
 
-def translate_text(text, dest_lang="en"):
+def translate_text(text, target_language='en'):
     if not text.strip():
         return ""
     try:
-        translated = translator.translate(text, dest=dest_lang)
-        return translated.text
+        translated = GoogleTranslator(source='auto', target=target_language).translate(text)
+        return translated
     except Exception as e:
         st.warning(f"Translation failed: {e}")
         return text
@@ -293,16 +296,20 @@ if st.session_state.step == 1:
     if resume_file:
         raw_bytes = resume_file.read()
         resume_text = parse_resume(raw_bytes, resume_file.name)
+        # Extract skills and pre-fill tech stack
         extracted_skills = extract_skills_from_resume(resume_text)
         if extracted_skills:
             st.info(f"Extracted skills from resume: {', '.join(extracted_skills)}")
+            # Update tech stack field live
             if not tech_stack:
                 tech_stack = ", ".join(extracted_skills)
             else:
+                # Append if missing
                 current_skills = [x.strip().lower() for x in tech_stack.split(",")]
                 for s in extracted_skills:
                     if s.lower() not in current_skills:
                         tech_stack += ", " + s
+            # Update session state candidate info tech stack
             st.session_state.candidate_info["Tech Stack"] = tech_stack
 
     if submitted:
@@ -337,6 +344,7 @@ if st.session_state.step == 1:
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
 
+    # Language selection for multilingual support
     lang_option = st.selectbox(
         "Choose your language (answers will be translated to English for evaluation):",
         options=["English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"]
@@ -360,6 +368,7 @@ elif st.session_state.step == 2:
         submitted = st.form_submit_button("✅ Submit Answers")
 
     if submitted:
+        # Translate answers to English for scoring & sentiment
         translated = {}
         sentiments = {}
         for tech, qas in st.session_state.answers.items():
@@ -368,7 +377,7 @@ elif st.session_state.step == 2:
             for qa in qas:
                 text = qa.get("answer", "").strip()
                 if lang_code != "en" and text:
-                    text_en = translate_text(text, dest_lang="en")
+                    text_en = translate_text(text, target_language="en")
                 else:
                     text_en = text
                 translated[tech].append(text_en)
@@ -380,6 +389,7 @@ elif st.session_state.step == 2:
         score = evaluate_answers(st.session_state.answers)
         grade = grade_candidate(score)
 
+        # Recommendations based on score and tech stack
         job, upskill = recommend_jobs_and_upskill(score, st.session_state.candidate_info.get("Tech Stack", ""))
         st.session_state.job_recommendation = job
         st.session_state.upskill_recommendation = upskill
