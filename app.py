@@ -2,32 +2,29 @@ import streamlit as st
 import os
 import re
 import time
-from dotenv import load_dotenv
-import openai
+import requests
 
-# Load environment variables
-load_dotenv()
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Set your Hugging Face API key here or as an env variable "HUGGINGFACE_API_KEY"
+HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "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")
 
-if not OPENROUTER_API_KEY:
-    st.error("🚨 Please set your OPENROUTER_API_KEY in environment variables!")
+if not HF_API_KEY:
+    st.error("🚨 Please set your HUGGINGFACE_API_KEY environment variable!")
     st.stop()
 
-# Configure OpenAI client for OpenRouter API
-openai.api_key = OPENROUTER_API_KEY
-openai.api_base = "https://openrouter.ai/api/v1"
+# Hugging Face API endpoint for chat/completion
+HF_API_URL = "https://api-inference.huggingface.co/models/gpt2"  # We'll use GPT2 for demo; better to use an instruction tuned model
 
-# Page config
-st.set_page_config(
-    page_title="TalentScout AI Hiring Assistant",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# But GPT2 is not instruction tuned, so better to use a HF model like 'gpt-j' or 'facebook/blenderbot-400M-distill'
+# I recommend using "google/flan-t5-large" or "bigscience/bloom" for better chat.
+# For demonstration, let's use "google/flan-t5-large" text generation endpoint:
 
-# --- Premium UI Style ---
+HF_API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+
+HEADERS = {"Authorization": f"Bearer {HF_API_KEY}"}
+
+# Style for premium UI (same as requested)
 st.markdown("""
 <style>
-/* Container */
 .stApp {
     max-width: 900px;
     margin: auto;
@@ -36,8 +33,6 @@ st.markdown("""
     background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
     color: #102a43;
 }
-
-/* Buttons */
 .stButton>button {
     background-color: #0052cc;
     color: white;
@@ -50,37 +45,27 @@ st.markdown("""
 .stButton>button:hover {
     background-color: #003d99;
 }
-
-/* Inputs */
 input, textarea, select {
     border-radius: 0.5rem !important;
     border: 1.8px solid #bcccdc !important;
     padding: 0.5rem 0.75rem !important;
     font-size: 1rem !important;
 }
-
-/* Header */
 h1 {
     font-size: 3rem !important;
     font-weight: 900 !important;
     color: #102a43 !important;
     margin-bottom: 0.3rem !important;
 }
-
-/* Subtitle */
 .subtitle {
     font-size: 1.2rem;
     color: #334e68;
     margin-bottom: 2rem;
 }
-
-/* Sidebar */
 .css-1d391kg {
     background: #f0f4f8 !important;
     font-weight: 600 !important;
 }
-
-/* Cards */
 .card {
     background: white;
     padding: 1.8rem 2.2rem;
@@ -92,8 +77,6 @@ h1 {
 .card:hover {
     transform: translateY(-5px);
 }
-
-/* Expanders */
 .stExpander > div[role="button"] {
     font-weight: 700 !important;
     font-size: 1.1rem !important;
@@ -102,11 +85,15 @@ h1 {
 </style>
 """, unsafe_allow_html=True)
 
-# Title and subtitle
+st.set_page_config(
+    page_title="TalentScout AI Hiring Assistant",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 st.markdown("<h1>TalentScout AI Hiring Assistant</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Accelerate your hiring process with AI-powered interview question generation and evaluation.</p>', unsafe_allow_html=True)
 
-# Initialize session state variables
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.candidate_info = {}
@@ -118,7 +105,6 @@ if 'step' not in st.session_state:
 if 'trigger_rerun' not in st.session_state:
     st.session_state.trigger_rerun = False
 
-# Sidebar Navigation
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
 for i, s in enumerate(steps, 1):
@@ -128,44 +114,63 @@ for i, s in enumerate(steps, 1):
 
 st.progress(st.session_state.step / len(steps))
 
-# Reset function
 def reset():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.experimental_rerun()
 
-# Generate questions using OpenRouter API
-def generate_questions(tech_stack, retries=3, delay=3):
+def query_huggingface(prompt, retries=3, delay=3):
+    """
+    Query Hugging Face text generation model for interview questions.
+    """
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 300,
+            "do_sample": True,
+            "temperature": 0.7,
+            "top_p": 0.9
+        },
+        "options": {"wait_for_model": True}
+    }
+    for attempt in range(retries):
+        try:
+            response = requests.post(HF_API_URL, headers=HEADERS, json=payload, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
+                    return data[0]["generated_text"].strip()
+                else:
+                    # Unexpected response format
+                    return None
+            else:
+                st.warning(f"HF API returned status code {response.status_code}: {response.text}")
+                time.sleep(delay)
+        except Exception as e:
+            if attempt < retries - 1:
+                st.warning(f"Attempt {attempt+1} failed: {e}. Retrying...")
+                time.sleep(delay)
+            else:
+                st.error(f"API error: {e}")
+                return None
+    return None
+
+def generate_questions(tech_stack):
     prompt = f"""
-You're a technical interviewer.
+You are a technical interviewer.
 
-A candidate has listed the following tech stack: {tech_stack}.
+Generate 3 to 5 technical interview questions for each technology listed below:
 
-Generate 3 to 5 technical interview questions for each technology mentioned.
+{tech_stack}
 
-Respond in this format:
+Respond in the format:
+
 ### TechnologyName
 * Question 1
 * Question 2
 * Question 3
 """
-    for attempt in range(retries):
-        try:
-            response = openai.ChatCompletion.create(
-                model="openchat/openchat-3.5-1210",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=700,
-            )
-            content = response.choices[0].message["content"]
-            return content.strip()
-        except Exception as e:
-            if attempt < retries -1:
-                st.warning(f"Attempt {attempt+1} failed: {e}. Retrying in {delay} seconds...")
-                time.sleep(delay)
-            else:
-                st.error(f"API Error: {e}")
-                return None
+    return query_huggingface(prompt)
 
 def parse_questions(text):
     lines = text.split('\n')
@@ -192,7 +197,6 @@ def grade_candidate(score):
             "Average - Needs Improvement" if score >= 40 else
             "Poor - Not Recommended")
 
-# --- Step 1: Candidate Info ---
 if st.session_state.step == 1:
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -235,7 +239,6 @@ if st.session_state.step == 1:
             else:
                 st.error("❌ Failed to generate questions. Try again later.")
 
-# --- Step 2: Technical Interview ---
 elif st.session_state.step == 2:
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -260,7 +263,6 @@ elif st.session_state.step == 2:
         st.session_state.step = 3
         st.session_state.trigger_rerun = True
 
-# --- Step 3: Summary ---
 elif st.session_state.step == 3:
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -289,7 +291,6 @@ elif st.session_state.step == 3:
             reset()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Safe rerun trigger
 if st.session_state.get("trigger_rerun"):
     st.session_state.trigger_rerun = False
     st.experimental_rerun()
