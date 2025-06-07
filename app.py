@@ -4,13 +4,13 @@ import os
 import re
 from dotenv import load_dotenv
 
-# --- Load environment ---
+# Load HuggingFace Token
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct"
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
-# --- Streamlit page setup ---
+# Streamlit Page Config and Style
 st.set_page_config(page_title="TalentScout AI Hiring Assistant", layout="wide")
 st.markdown("""
 <style>
@@ -31,51 +31,48 @@ st.markdown("""
 .stButton>button:hover {
     background-color: #45a049;
 }
-.stTextInput>div>input, .stNumberInput>div>input, textarea {
-    border-radius: 0.3rem;
-    border: 1px solid #ccc;
-    padding: 0.5rem;
+textarea, input {
+    border-radius: 0.3rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Setup session ---
+# Initialize session state
 if 'step' not in st.session_state:
-    st.session_state.update({
-        'step': 1,
-        'candidate_info': {},
-        'tech_questions_raw': "",
-        'tech_questions': {},
-        'answers': {},
-        'score': None,
-        'grade': None
-    })
+    st.session_state.step = 1
+    st.session_state.candidate_info = {}
+    st.session_state.tech_questions_raw = ""
+    st.session_state.tech_questions = {}
+    st.session_state.answers = {}
+    st.session_state.score = None
+    st.session_state.grade = None
 
-# --- Sidebar navigation ---
+# Sidebar Navigation
 steps = ["Candidate Info 📝", "Technical Interview 💻", "Evaluation Summary 📊"]
 st.sidebar.title("Interview Process")
 for i, s in enumerate(steps, 1):
     if st.sidebar.button(s, key=f"nav_{i}"):
         st.session_state.step = i
-        st.rerun()
+        st.experimental_rerun()
 
-st.progress(min(st.session_state.step / len(steps), 1.0))
+st.progress(st.session_state.step / len(steps))
 
-# --- Reset function ---
+# Reset
 def reset():
-    st.session_state.clear()
-    st.rerun()
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.experimental_rerun()
 
-# --- Utility Functions ---
+# --- Core Functions ---
 def generate_questions(tech_stack):
     prompt = f"""
 You're a technical interviewer.
 
 A candidate has listed the following tech stack: {tech_stack}.
 
-Generate 3 to 5 technical interview questions for each technology mentioned to assess the candidate's skills.
+Generate 3 to 5 technical interview questions for each technology mentioned.
 
-Respond in a clear format:
+Respond in this format:
 ### TechnologyName
 * Question 1
 * Question 2
@@ -83,70 +80,54 @@ Respond in a clear format:
 """
     payload = {
         "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 256,
-            "temperature": 0.7,
-            "do_sample": True
-        }
+        "parameters": {"max_new_tokens": 256, "temperature": 0.7}
     }
-    response = requests.post(API_URL, headers=headers, json=payload)
-    if response.status_code == 200:
-        return response.json()[0]['generated_text'].strip()
-    else:
-        return None
+    res = requests.post(API_URL, headers=headers, json=payload)
+    return res.json()[0]['generated_text'].strip() if res.status_code == 200 else None
 
 def parse_questions(text):
     lines = text.split('\n')
-    clean_lines = []
-    started = False
-    for line in lines:
-        if line.strip().startswith("###"):
-            started = True
-        if started:
-            clean_lines.append(line)
-    text = "\n".join(clean_lines)
-
-    sections = re.split(r'\n(?=###\s*[^\n]+)', text)
+    sections = re.split(r'\n(?=###\s*)', "\n".join(lines))
     parsed = {}
-    for section in sections:
-        lines = section.strip().split('\n')
+    for sec in sections:
+        lines = sec.strip().split('\n')
         if not lines:
             continue
-        tech = re.match(r'###\s*(.+)', lines[0]).group(1).strip()
-        questions = [re.sub(r'^\s*[*\-]\s*', '', q).strip() for q in lines[1:] if q.strip()]
-        if questions:
-            parsed[tech] = questions
+        tech = lines[0].replace("###", "").strip()
+        qs = [re.sub(r"^[*-]\s*", "", l).strip() for l in lines[1:] if l.strip()]
+        if qs:
+            parsed[tech] = qs
     return parsed
 
-def evaluate_answers(questions_answers):
-    total = sum(len(v) for v in questions_answers.values())
-    answered = sum(1 for qa in sum(questions_answers.values(), []) if qa["answer"].strip())
+def evaluate_answers(qas):
+    total = sum(len(v) for v in qas.values())
+    answered = sum(1 for v in qas.values() for qa in v if qa.get("answer", "").strip())
     return (answered / total) * 100 if total else 0
 
 def grade_candidate(score):
-    if score >= 80: return "Excellent - Highly Recommended"
-    elif score >= 60: return "Good - Recommended"
-    elif score >= 40: return "Average - Needs Improvement"
-    else: return "Poor - Not Recommended"
+    return ("Excellent - Highly Recommended" if score >= 80 else
+            "Good - Recommended" if score >= 60 else
+            "Average - Needs Improvement" if score >= 40 else
+            "Poor - Not Recommended")
 
-# --- Page 1: Candidate Info ---
+# --- Step 1: Candidate Info ---
 if st.session_state.step == 1:
     st.header("📝 Step 1: Candidate Information")
     with st.form("candidate_form"):
         col1, col2 = st.columns(2)
         with col1:
-            name = st.text_input("Full Name", st.session_state.candidate_info.get("Full Name", ""))
-            email = st.text_input("Email Address", st.session_state.candidate_info.get("Email", ""))
-            phone = st.text_input("Phone Number", st.session_state.candidate_info.get("Phone", ""))
+            name = st.text_input("Full Name", value=st.session_state.candidate_info.get("Full Name", ""))
+            email = st.text_input("Email Address", value=st.session_state.candidate_info.get("Email", ""))
+            phone = st.text_input("Phone Number", value=st.session_state.candidate_info.get("Phone", ""))
             exp = st.number_input("Years of Experience", 0, 50, value=st.session_state.candidate_info.get("Years of Experience", 0))
         with col2:
-            role = st.text_input("Desired Position", st.session_state.candidate_info.get("Desired Position", ""))
-            location = st.text_input("Current Location", st.session_state.candidate_info.get("Current Location", ""))
-            tech_stack = st.text_area("Tech Stack (comma-separated)", st.session_state.candidate_info.get("Tech Stack", ""))
+            role = st.text_input("Desired Position", value=st.session_state.candidate_info.get("Desired Position", ""))
+            location = st.text_input("Current Location", value=st.session_state.candidate_info.get("Current Location", ""))
+            tech_stack = st.text_area("Tech Stack (comma-separated)", value=st.session_state.candidate_info.get("Tech Stack", ""))
         submitted = st.form_submit_button("👉 Generate Interview Questions")
 
     if submitted:
-        if not all([name, email, phone, tech_stack.strip()]):
+        if not name or not email or not phone or not tech_stack.strip():
             st.error("⚠️ Please fill all required fields!")
         else:
             st.session_state.candidate_info = {
@@ -154,64 +135,60 @@ if st.session_state.step == 1:
                 "Years of Experience": exp, "Desired Position": role,
                 "Current Location": location, "Tech Stack": tech_stack
             }
-            with st.spinner("🧠 Generating technical interview questions..."):
+            with st.spinner("🧠 Generating questions..."):
                 questions_text = generate_questions(tech_stack)
             if questions_text:
-                try:
-                    st.session_state.tech_questions_raw = questions_text
-                    st.session_state.tech_questions = parse_questions(questions_text)
-                    st.session_state.answers = {
-                        tech: [{"question": q, "answer": ""} for q in qs]
-                        for tech, qs in st.session_state.tech_questions.items()
-                    }
-                    st.session_state.step = 2
-                    st.success("✅ Questions generated successfully!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Error while parsing questions: {e}")
+                st.session_state.tech_questions_raw = questions_text
+                st.session_state.tech_questions = parse_questions(questions_text)
+                st.session_state.answers = {
+                    tech: [{"question": q, "answer": ""} for q in qs]
+                    for tech, qs in st.session_state.tech_questions.items()
+                }
+                st.success("✅ Questions generated! Moving to next step...")
+                st.session_state.step = 2
+                st.experimental_rerun()
             else:
-                st.error("❌ Failed to generate questions from model.")
+                st.error("❌ Failed to generate questions. Try again later.")
 
-# --- Page 2: Answer Questions ---
+# --- Step 2: Technical Interview ---
 elif st.session_state.step == 2:
     st.header("💻 Step 2: Technical Interview Questions")
-    st.info("Fill in your answers below. Expand each section to answer questions.")
     with st.form("answers_form"):
         for tech, qas in st.session_state.answers.items():
-            with st.expander(f"💡 {tech} ({len(qas)} questions)"):
+            with st.expander(f"💡 {tech} ({len(qas)} questions)", expanded=False):
                 for i, qa in enumerate(qas):
                     st.markdown(f"**Q{i+1}. {qa['question']}**")
-                    ans = st.text_area(
-                        label=f"Your Answer for Q{i+1}",
-                        value=qa['answer'],
-                        key=f"{tech}_ans_{i}",
-                        height=100
+                    st.session_state.answers[tech][i]["answer"] = st.text_area(
+                        f"Your Answer for Q{i+1}", value=qa["answer"], height=100, key=f"{tech}_{i}"
                     )
-                    st.session_state.answers[tech][i]["answer"] = ans
-        if st.form_submit_button("✅ Submit Answers"):
-            st.session_state.score = evaluate_answers(st.session_state.answers)
-            st.session_state.grade = grade_candidate(st.session_state.score)
-            st.success(f"🎉 Answers submitted! Score: {st.session_state.score:.2f}% ({st.session_state.grade})")
-            st.session_state.step = 3
-            st.rerun()
+        submitted = st.form_submit_button("✅ Submit Answers")
 
-# --- Page 3: Summary ---
+    if submitted:
+        score = evaluate_answers(st.session_state.answers)
+        grade = grade_candidate(score)
+        st.session_state.score = score
+        st.session_state.grade = grade
+        st.success(f"🎯 Your Score: {score:.2f}% — {grade}")
+        st.session_state.step = 3
+        st.experimental_rerun()
+
+# --- Step 3: Summary ---
 elif st.session_state.step == 3:
     st.header("📊 Step 3: Evaluation Summary")
     st.balloons()
-    st.markdown(f"### 👤 Candidate: **{st.session_state.candidate_info.get('Full Name', '')}**")
-    st.markdown(f"**📈 Overall Score:** `{st.session_state.score:.2f}%`")
-    st.markdown(f"**🏅 Overall Grade:** `{st.session_state.grade}`")
+    st.success("✅ Interview Completed!")
 
-    st.markdown("---\n### 📚 Scores by Technology")
+    st.markdown(f"### Candidate: **{st.session_state.candidate_info.get('Full Name')}**")
+    st.markdown(f"**Score:** {st.session_state.score:.2f}%")
+    st.markdown(f"**Grade:** {st.session_state.grade}")
+
+    st.markdown("### Scores by Technology")
     for tech, qas in st.session_state.answers.items():
-        answered = sum(1 for qa in qas if qa["answer"].strip())
-        total = len(qas)
-        score = (answered / total) * 100 if total else 0
-        grade = grade_candidate(score)
-        st.markdown(f"- **{tech}**: {score:.2f}% — {grade}")
+        tech_score = evaluate_answers({tech: qas})
+        tech_grade = grade_candidate(tech_score)
+        st.markdown(f"- **{tech}**: {tech_score:.2f}% — {tech_grade}")
 
-    st.markdown("---\n### 📝 Review Answers")
+    st.markdown("---\n### Review Answers")
     for tech, qas in st.session_state.answers.items():
         with st.expander(f"🔍 {tech} Answers"):
             for i, qa in enumerate(qas):
